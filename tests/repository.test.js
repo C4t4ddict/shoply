@@ -74,3 +74,23 @@ test("카테고리를 삭제하면 상품은 기본 카테고리로 이동한다
   assert.equal(state.categories.some((item) => item.id === category.id), false);
   assert.equal(state.items[0].categoryId, "default");
 });
+
+test("카테고리 순서를 변경하고 저장한다", async () => {
+  const travel = await Repository.createCategory("여행");
+  const clothes = await Repository.createCategory("옷");
+
+  await Repository.reorderCategories([clothes.id, "default", travel.id]);
+
+  const state = await Repository.load();
+  assert.deepEqual(state.categories.map((category) => category.id), [clothes.id, "default", travel.id]);
+});
+
+test("누락되거나 중복된 카테고리 순서는 거부한다", async () => {
+  const travel = await Repository.createCategory("여행");
+  await assert.rejects(
+    Repository.reorderCategories(["default", "default"]),
+    /순서 정보가 올바르지 않습니다/
+  );
+  const state = await Repository.load();
+  assert.deepEqual(state.categories.map((category) => category.id), ["default", travel.id]);
+});
