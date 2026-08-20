@@ -3,12 +3,14 @@
 
   const Core = globalThis.ShoplyCore;
   const Repository = globalThis.ShoplyRepository;
+  const UiPreferences = globalThis.ShoplyUiPreferences;
   const elements = Object.fromEntries(
     [
       "scanButton", "emptyScanButton", "captureLoading", "captureEmpty", "captureForm", "captureImage",
       "captureStore", "confidenceBadge", "titleInput", "priceInput", "captureNotice", "optionSummary",
       "addCategorySelect", "categoryTabs", "activeCategoryName", "activeItemCount", "activeCategoryTotal",
-      "emptyLibrary", "productList", "newCategoryButton", "categoryDialog", "categoryForm",
+      "emptyLibrary", "productList", "newCategoryButton", "librarySection", "libraryContent",
+      "toggleLibraryButton", "categoryDialog", "categoryForm",
       "categoryNameInput", "cancelCategoryButton", "deleteCategoryButton", "toast"
     ].map((id) => [id, document.getElementById(id)])
   );
@@ -17,6 +19,7 @@
   let selectedCategoryId = "default";
   let capturedProduct = null;
   let toastTimer = null;
+  let libraryCollapsed = false;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -140,6 +143,13 @@
     renderLibrary();
   }
 
+  function renderLibraryCollapsed() {
+    elements.librarySection.classList.toggle("collapsed", libraryCollapsed);
+    elements.toggleLibraryButton.setAttribute("aria-expanded", String(!libraryCollapsed));
+    elements.toggleLibraryButton.title = libraryCollapsed ? "카테고리 펼치기" : "카테고리 접기";
+    elements.toggleLibraryButton.querySelector(".sr-only").textContent = elements.toggleLibraryButton.title;
+  }
+
   async function handleAdd(event) {
     event.preventDefault();
     if (!capturedProduct) return;
@@ -180,8 +190,11 @@
   }
 
   async function initialize() {
-    state = await Repository.load();
+    const [storedState, preferences] = await Promise.all([Repository.load(), UiPreferences.load()]);
+    state = storedState;
+    libraryCollapsed = preferences.libraryCollapsed;
     render();
+    renderLibraryCollapsed();
     Repository.subscribe((nextState) => {
       state = nextState;
       render();
@@ -214,6 +227,11 @@
     elements.categoryNameInput.value = "";
     elements.categoryDialog.showModal();
     elements.categoryNameInput.focus();
+  });
+  elements.toggleLibraryButton.addEventListener("click", async () => {
+    libraryCollapsed = !libraryCollapsed;
+    renderLibraryCollapsed();
+    await UiPreferences.setLibraryCollapsed(libraryCollapsed);
   });
   elements.cancelCategoryButton.addEventListener("click", () => elements.categoryDialog.close());
   elements.categoryForm.addEventListener("submit", async (event) => {
