@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>라이트 트래블 백 | Example Shop</title>
+    <meta property="og:title" content="라이트 트래블 백" />
+    <meta property="og:image" content="https://example.test/travel-bag.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "추천 양말 세트",
+        "offers": { "@type": "Offer", "price": 9900, "priceCurrency": "KRW" }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "라이트 트래블 백",
+        "image": "https://example.test/travel-bag.jpg",
+        "offers": {
+          "@type": "Offer",
+          "url": "",
+          "price": 24900,
+          "priceCurrency": "KRW",
+          "priceSpecification": [
+            { "@type": "UnitPriceSpecification", "price": 34900, "priceType": "StrikethroughPrice" }
+          ]
+        }
+      }
+    </script>
+    <style>
+      main, aside { display: block; }
+      .product-price { font-size: 28px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>라이트 트래블 백</h1>
+      <p><del>정가 34,900원</del></p>
+      <p class="product-price">판매가 24,900원</p>
+      <p>배송비 3,000원</p>
+      <button>장바구니</button>
+    </main>
+    <aside class="recommend"><strong>추천 상품</strong><span class="price">9,900원</span></aside>
+    <pre id="extraction-result"></pre>
+    <script src="../../src/shared.js"></script>
+    <script src="../../src/extractor.js"></script>
+    <script>
+      document.getElementById("extraction-result").textContent = JSON.stringify(globalThis.ShoplyExtractor.extract());
+    </script>
+  </body>
+</html>

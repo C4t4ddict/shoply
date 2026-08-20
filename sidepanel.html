@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shoply</title>
+    <link rel="stylesheet" href="styles/sidepanel.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand" aria-label="Shoply">
+        <span class="brand-mark">S</span>
+        <div>
+          <strong>Shoply</strong>
+          <small>나만의 쇼핑 플레이리스트</small>
+        </div>
+      </div>
+      <button id="scanButton" class="icon-button" type="button" title="현재 페이지 다시 읽기" aria-label="현재 페이지 다시 읽기">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" /></svg>
+      </button>
+    </header>
+
+    <main>
+      <section id="captureSection" class="capture-section" aria-labelledby="captureTitle">
+        <div id="captureLoading" class="capture-loading">
+          <span class="spinner" aria-hidden="true"></span>
+          <div><strong>상품 정보를 찾고 있어요</strong><small>현재 페이지를 분석하는 중입니다.</small></div>
+        </div>
+
+        <div id="captureEmpty" class="capture-empty hidden">
+          <span class="empty-icon">＋</span>
+          <div><strong>현재 상품을 추가해보세요</strong><small>상품 상세 페이지에서 아래 버튼을 눌러주세요.</small></div>
+          <button id="emptyScanButton" class="secondary-button" type="button">현재 페이지 읽기</button>
+        </div>
+
+        <form id="captureForm" class="product-editor hidden">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">NOW PLAYING</span>
+              <h1 id="captureTitle">현재 상품</h1>
+            </div>
+            <span id="confidenceBadge" class="confidence-badge">확인 필요</span>
+          </div>
+
+          <div class="capture-product">
+            <div class="capture-image-wrap">
+              <img id="captureImage" alt="추출된 상품 이미지" />
+              <span id="captureStore" class="store-badge"></span>
+            </div>
+            <div class="capture-fields">
+              <label>
+                <span>상품명</span>
+                <input id="titleInput" name="title" required maxlength="200" />
+              </label>
+              <label>
+                <span>현재 가격</span>
+                <div class="price-input-wrap"><input id="priceInput" name="price" inputmode="numeric" required /><b>원</b></div>
+              </label>
+            </div>
+          </div>
+
+          <p id="captureNotice" class="capture-notice hidden"></p>
+          <div id="optionSummary" class="option-summary hidden"></div>
+
+          <div class="add-controls">
+            <label class="category-select-label">
+              <span>담을 카테고리</span>
+              <select id="addCategorySelect"></select>
+            </label>
+            <button class="primary-button" type="submit">＋ 상품 담기</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="library-section" aria-labelledby="libraryTitle">
+        <div class="section-heading library-heading">
+          <div>
+            <span class="eyebrow">MY COLLECTIONS</span>
+            <h2 id="libraryTitle">쇼핑 카테고리</h2>
+          </div>
+          <button id="newCategoryButton" class="text-button" type="button">＋ 새 카테고리</button>
+        </div>
+
+        <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="카테고리"></div>
+
+        <article class="category-summary">
+          <div>
+            <span id="activeCategoryName">내 쇼핑</span>
+            <small id="activeItemCount">상품 0개</small>
+          </div>
+          <div class="category-total">
+            <small>카테고리 합계</small>
+            <strong id="activeCategoryTotal">₩0</strong>
+          </div>
+        </article>
+
+        <div id="emptyLibrary" class="library-empty">
+          <div class="record-art" aria-hidden="true"><span></span></div>
+          <strong>아직 담긴 상품이 없어요</strong>
+          <p>여러 쇼핑몰에서 마음에 드는 상품을<br />하나의 카테고리로 모아보세요.</p>
+        </div>
+
+        <div id="productList" class="product-list"></div>
+        <button id="deleteCategoryButton" class="danger-text-button hidden" type="button">이 카테고리 삭제</button>
+      </section>
+    </main>
+
+    <dialog id="categoryDialog">
+      <form id="categoryForm" method="dialog">
+        <div class="dialog-mark">＋</div>
+        <h2>새 카테고리</h2>
+        <p>여행 준비, 가을 코디처럼 원하는 테마로 묶어보세요.</p>
+        <label>
+          <span>카테고리 이름</span>
+          <input id="categoryNameInput" maxlength="40" placeholder="예: 제주도 여행 준비" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button id="cancelCategoryButton" class="secondary-button" type="button">취소</button>
+          <button class="primary-button" type="submit">만들기</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="src/shared.js"></script>
+    <script src="src/repository.js"></script>
+    <script src="src/sidepanel.js"></script>
+  </body>
+</html>

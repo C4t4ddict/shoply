@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Test and coverage output
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local agent settings
+.codex/
+.agents/
+AGENTS.md
+CLAUDE.md
+
