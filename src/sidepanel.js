@@ -114,7 +114,7 @@
             </div>
           </div>
           <div class="product-actions">
-            <select data-action="move" aria-label="카테고리 이동">${categoryOptions(item.categoryId)}</select>
+            <select data-action="move" aria-label="플레이리스트 이동">${categoryOptions(item.categoryId)}</select>
             <button class="remove-item" type="button" data-action="remove" title="삭제" aria-label="상품 삭제">×</button>
           </div>
         </div>
@@ -156,7 +156,7 @@
         categoryId
       );
       selectedCategoryId = categoryId;
-      toast("카테고리에 담았어요. 합계가 업데이트됐습니다.");
+      toast("플레이리스트에 담았어요. 합계가 업데이트됐습니다.");
     } catch (error) {
       toast(error.message);
     }
@@ -222,17 +222,17 @@
       const category = await Repository.createCategory(elements.categoryNameInput.value);
       selectedCategoryId = category.id;
       elements.categoryDialog.close();
-      toast("새 카테고리를 만들었어요.");
+      toast("새 플레이리스트를 만들었어요.");
     } catch (error) {
       toast(error.message);
     }
   });
   elements.deleteCategoryButton.addEventListener("click", async () => {
     const category = state.categories.find((candidate) => candidate.id === selectedCategoryId);
-    if (!category || !confirm(`'${category.name}' 카테고리를 삭제할까요? 상품은 '내 쇼핑'으로 이동합니다.`)) return;
+    if (!category || !confirm(`'${category.name}' 플레이리스트를 삭제할까요? 상품은 '내 쇼핑'으로 이동합니다.`)) return;
     await Repository.removeCategory(category.id);
     selectedCategoryId = "default";
-    toast("카테고리를 삭제했어요.");
+    toast("플레이리스트를 삭제했어요.");
   });
   elements.priceInput.addEventListener("input", () => {
     const price = Core.parsePrice(elements.priceInput.value);
