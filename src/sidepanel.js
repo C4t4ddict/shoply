@@ -84,6 +84,29 @@
       .join("");
   }
 
+  function categoryTabRects() {
+    return new Map(
+      [...elements.categoryTabs.querySelectorAll("[data-category-id]")]
+        .map((tab) => [tab.dataset.categoryId, tab.getBoundingClientRect()])
+    );
+  }
+
+  function animateCategoryTabs(previousRects) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    elements.categoryTabs.querySelectorAll("[data-category-id]").forEach((tab) => {
+      const previousRect = previousRects.get(tab.dataset.categoryId);
+      if (!previousRect) return;
+      const nextRect = tab.getBoundingClientRect();
+      const deltaX = previousRect.left - nextRect.left;
+      if (Math.abs(deltaX) < 1) return;
+      tab.getAnimations().forEach((animation) => animation.cancel());
+      tab.animate(
+        [{ transform: `translateX(${deltaX}px)` }, { transform: "translateX(0)" }],
+        { duration: 160, easing: "cubic-bezier(.2,.8,.2,1)" }
+      );
+    });
+  }
+
   function renderCategories() {
     if (!state.categories.some((category) => category.id === selectedCategoryId)) selectedCategoryId = "default";
     elements.categoryTabs.innerHTML = state.categories
@@ -142,14 +165,20 @@
   }
 
   async function persistCategoryOrder(categoryIds, movedCategoryId) {
+    const previousRects = categoryTabRects();
     try {
       const categories = await Repository.reorderCategories(categoryIds);
       state = { ...state, categories };
       render();
-      elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(movedCategoryId)}"]`)?.focus();
-      toast("카테고리 순서를 변경했어요.");
+      animateCategoryTabs(previousRects);
+      const movedTab = elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(movedCategoryId)}"]`);
+      movedTab?.focus();
+      const movedCategory = categories.find((category) => category.id === movedCategoryId);
+      const movedIndex = categories.findIndex((category) => category.id === movedCategoryId);
+      toast(`‘${movedCategory?.name || "카테고리"}’ ${movedIndex + 1}번째로 이동했어요.`);
     } catch (error) {
       renderCategories();
+      animateCategoryTabs(previousRects);
       toast(error.message);
     }
   }
@@ -238,7 +267,9 @@
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
     const insertBefore = event.clientX < target.getBoundingClientRect().left + target.offsetWidth / 2;
+    const previousRects = categoryTabRects();
     elements.categoryTabs.insertBefore(dragged, insertBefore ? target : target.nextSibling);
+    animateCategoryTabs(previousRects);
   });
   elements.categoryTabs.addEventListener("drop", async (event) => {
     if (!draggedCategoryId) return;

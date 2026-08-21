@@ -135,3 +135,7 @@ dialog p { margin: 0 0 16px; color: var(--muted); font-size: 10px; line-height: 
   .add-controls { grid-template-columns: 1fr; }
   .primary-button { width: 100%; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .category-tab { transition: none; }
+}
