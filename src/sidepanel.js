@@ -19,6 +19,7 @@
   let selectedCategoryId = "default";
   let capturedProduct = null;
   let toastTimer = null;
+  let draggedCategoryId = null;
   let libraryCollapsed = false;
   let libraryCollapseAnimation = null;
   let waitingForHostAccess = false;
@@ -96,12 +97,35 @@
       .join("");
   }
 
+  function categoryTabRects() {
+    return new Map(
+      [...elements.categoryTabs.querySelectorAll("[data-category-id]")]
+        .map((tab) => [tab.dataset.categoryId, tab.getBoundingClientRect()])
+    );
+  }
+
+  function animateCategoryTabs(previousRects) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    elements.categoryTabs.querySelectorAll("[data-category-id]").forEach((tab) => {
+      const previousRect = previousRects.get(tab.dataset.categoryId);
+      if (!previousRect) return;
+      const nextRect = tab.getBoundingClientRect();
+      const deltaX = previousRect.left - nextRect.left;
+      if (Math.abs(deltaX) < 1) return;
+      tab.getAnimations().forEach((animation) => animation.cancel());
+      tab.animate(
+        [{ transform: `translateX(${deltaX}px)` }, { transform: "translateX(0)" }],
+        { duration: 160, easing: "cubic-bezier(.2,.8,.2,1)" }
+      );
+    });
+  }
+
   function renderCategories() {
     if (!state.categories.some((category) => category.id === selectedCategoryId)) selectedCategoryId = "default";
     elements.categoryTabs.innerHTML = state.categories
       .map((category) => {
         const count = state.items.filter((item) => item.categoryId === category.id).length;
-        return `<button class="category-tab" type="button" role="tab" data-category-id="${category.id}" aria-selected="${category.id === selectedCategoryId}">${escapeHtml(category.name)}<b>${count}</b></button>`;
+        return `<button class="category-tab" type="button" role="tab" draggable="true" data-category-id="${category.id}" aria-selected="${category.id === selectedCategoryId}" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" title="드래그하거나 Alt+방향키로 순서 변경">${escapeHtml(category.name)}<b>${count}</b></button>`;
       })
       .join("");
     elements.addCategorySelect.innerHTML = categoryOptions(selectedCategoryId);
@@ -198,6 +222,25 @@
     elements.libraryContent.inert = libraryCollapsed;
   }
 
+  async function persistCategoryOrder(categoryIds, movedCategoryId) {
+    const previousRects = categoryTabRects();
+    try {
+      const categories = await Repository.reorderCategories(categoryIds);
+      state = { ...state, categories };
+      render();
+      animateCategoryTabs(previousRects);
+      const movedTab = elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(movedCategoryId)}"]`);
+      movedTab?.focus();
+      const movedCategory = categories.find((category) => category.id === movedCategoryId);
+      const movedIndex = categories.findIndex((category) => category.id === movedCategoryId);
+      toast(`‘${movedCategory?.name || "플레이리스트"}’ ${movedIndex + 1}번째로 이동했어요.`);
+    } catch (error) {
+      renderCategories();
+      animateCategoryTabs(previousRects);
+      toast(error.message);
+    }
+  }
+
   async function handleAdd(event) {
     event.preventDefault();
     if (!capturedProduct) return;
@@ -268,6 +311,52 @@
     if (!tab) return;
     selectedCategoryId = tab.dataset.categoryId;
     render();
+  });
+  elements.categoryTabs.addEventListener("dragstart", (event) => {
+    const tab = event.target.closest("[data-category-id]");
+    if (!tab) return;
+    draggedCategoryId = tab.dataset.categoryId;
+    tab.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedCategoryId);
+  });
+  elements.categoryTabs.addEventListener("dragover", (event) => {
+    if (!draggedCategoryId) return;
+    const target = event.target.closest("[data-category-id]");
+    const dragged = elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(draggedCategoryId)}"]`);
+    if (!target || !dragged || target === dragged) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const insertBefore = event.clientX < target.getBoundingClientRect().left + target.offsetWidth / 2;
+    const previousRects = categoryTabRects();
+    elements.categoryTabs.insertBefore(dragged, insertBefore ? target : target.nextSibling);
+    animateCategoryTabs(previousRects);
+  });
+  elements.categoryTabs.addEventListener("drop", async (event) => {
+    if (!draggedCategoryId) return;
+    event.preventDefault();
+    const movedCategoryId = draggedCategoryId;
+    draggedCategoryId = null;
+    const categoryIds = [...elements.categoryTabs.querySelectorAll("[data-category-id]")]
+      .map((tab) => tab.dataset.categoryId);
+    await persistCategoryOrder(categoryIds, movedCategoryId);
+  });
+  elements.categoryTabs.addEventListener("dragend", (event) => {
+    event.target.closest("[data-category-id]")?.classList.remove("dragging");
+    if (draggedCategoryId) renderCategories();
+    draggedCategoryId = null;
+  });
+  elements.categoryTabs.addEventListener("keydown", async (event) => {
+    if (!event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    const tab = event.target.closest("[data-category-id]");
+    if (!tab) return;
+    const categoryIds = state.categories.map((category) => category.id);
+    const fromIndex = categoryIds.indexOf(tab.dataset.categoryId);
+    const toIndex = fromIndex + (event.key === "ArrowLeft" ? -1 : 1);
+    if (fromIndex < 0 || toIndex < 0 || toIndex >= categoryIds.length) return;
+    event.preventDefault();
+    [categoryIds[fromIndex], categoryIds[toIndex]] = [categoryIds[toIndex], categoryIds[fromIndex]];
+    await persistCategoryOrder(categoryIds, tab.dataset.categoryId);
   });
   elements.productList.addEventListener("click", handleProductAction);
   elements.productList.addEventListener("change", handleProductAction);

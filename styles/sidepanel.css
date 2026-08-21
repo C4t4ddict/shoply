@@ -91,7 +91,9 @@ input:focus, select:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba
 .text-button { padding: 6px 0; border-bottom: 1px solid var(--ink); }
 .category-tabs { display: flex; gap: 7px; overflow-x: auto; margin: 17px -16px 12px; padding: 0 16px 5px; scrollbar-width: none; }
 .category-tabs::-webkit-scrollbar { display: none; }
-.category-tab { flex: 0 0 auto; padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--muted); font-size: 10px; font-weight: 750; cursor: pointer; }
+.category-tab { flex: 0 0 auto; padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--muted); font-size: 10px; font-weight: 750; cursor: grab; }
+.category-tab:active { cursor: grabbing; }
+.category-tab.dragging { opacity: .48; border-style: dashed; }
 .category-tab[aria-selected="true"] { border-color: var(--ink); background: var(--ink); color: var(--lime); }
 .category-tab b { margin-left: 5px; font-size: 9px; }
 
@@ -143,5 +145,6 @@ dialog p { margin: 0 0 16px; color: var(--muted); font-size: 10px; line-height: 
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .category-tab { transition: none; }
   .collapse-button svg { transition: none; }
 }

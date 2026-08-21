@@ -130,6 +130,23 @@
     await save(state);
   }
 
+  async function reorderCategories(categoryIds) {
+    const state = await load();
+    if (!Array.isArray(categoryIds) || categoryIds.length !== state.categories.length) {
+      throw new Error("카테고리 순서 정보가 올바르지 않습니다.");
+    }
+
+    const categoriesById = new Map(state.categories.map((category) => [category.id, category]));
+    const uniqueIds = new Set(categoryIds);
+    if (uniqueIds.size !== state.categories.length || categoryIds.some((id) => !categoriesById.has(id))) {
+      throw new Error("카테고리 순서 정보가 올바르지 않습니다.");
+    }
+
+    state.categories = categoryIds.map((id) => categoriesById.get(id));
+    await save(state);
+    return state.categories;
+  }
+
   function subscribe(listener) {
     const handler = (changes, area) => {
       if (area === "local" && changes[STORAGE_KEY]) {
@@ -147,6 +164,7 @@
     load,
     removeCategory,
     removeItem,
+    reorderCategories,
     save,
     subscribe,
     updateItem
