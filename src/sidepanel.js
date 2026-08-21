@@ -17,6 +17,7 @@
   let selectedCategoryId = "default";
   let capturedProduct = null;
   let toastTimer = null;
+  let waitingForHostAccess = false;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -33,6 +34,8 @@
 
   function showCapture(product) {
     capturedProduct = product;
+    waitingForHostAccess = false;
+    elements.emptyScanButton.textContent = "현재 페이지 읽기";
     elements.captureLoading.classList.add("hidden");
     elements.captureEmpty.classList.add("hidden");
     elements.captureForm.classList.remove("hidden");
@@ -64,12 +67,18 @@
     elements.captureEmpty.querySelector("small").textContent = message || "상품 상세 페이지에서 다시 시도해주세요.";
   }
 
-  async function scanCurrentPage() {
+  async function scanCurrentPage({ requestHostAccess = false } = {}) {
     elements.captureEmpty.classList.add("hidden");
     elements.captureForm.classList.add("hidden");
     elements.captureLoading.classList.remove("hidden");
     try {
-      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_ACTIVE_TAB" });
+      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_ACTIVE_TAB", requestHostAccess });
+      if (response?.needsHostPermission) {
+        waitingForHostAccess = true;
+        elements.emptyScanButton.textContent = "사이트 접근 허용 후 다시 읽기";
+        showCaptureError(response.error);
+        return;
+      }
       if (!response?.ok || !response.product) throw new Error(response?.error || "상품 정보를 찾지 못했습니다.");
       showCapture(response.product);
     } catch (error) {
@@ -199,8 +208,8 @@
     }
   }
 
-  elements.scanButton.addEventListener("click", scanCurrentPage);
-  elements.emptyScanButton.addEventListener("click", scanCurrentPage);
+  elements.scanButton.addEventListener("click", () => scanCurrentPage({ requestHostAccess: true }));
+  elements.emptyScanButton.addEventListener("click", () => scanCurrentPage({ requestHostAccess: true }));
   elements.captureForm.addEventListener("submit", handleAdd);
   elements.categoryTabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-category-id]");
@@ -247,6 +256,9 @@
       showCaptureError(message.error);
       chrome.storage.session.remove(["pendingProduct", "pendingProductError", "contextScanStarted"]);
     }
+  });
+  chrome.permissions.onAdded.addListener(() => {
+    if (waitingForHostAccess) scanCurrentPage();
   });
 
   initialize().catch((error) => {

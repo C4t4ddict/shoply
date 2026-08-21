@@ -1,15 +1,26 @@
 {
   "manifest_version": 3,
   "name": "Shoply",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "여러 쇼핑몰의 상품을 테마별로 모으고 합계를 확인하세요.",
-  "minimum_chrome_version": "116",
+  "minimum_chrome_version": "133",
   "permissions": [
     "activeTab",
     "contextMenus",
     "scripting",
     "sidePanel",
     "storage"
+  ],
+  "host_permissions": [
+    "https://*.a-bly.com/*",
+    "https://*.ably.co.kr/*",
+    "https://*.musinsa.com/*",
+    "https://*.coupang.com/*",
+    "https://*.naver.com/*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "src/service-worker.js"
