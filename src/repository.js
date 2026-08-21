@@ -35,7 +35,7 @@
 
   async function createCategory(name) {
     const cleanName = root.ShoplyCore.normalizeText(name);
-    if (!cleanName) throw new Error("카테고리 이름을 입력해주세요.");
+    if (!cleanName) throw new Error("플레이리스트 이름을 입력해주세요.");
     const state = await load();
     const duplicate = state.categories.find(
       (category) => category.name.toLocaleLowerCase("ko") === cleanName.toLocaleLowerCase("ko")
@@ -55,7 +55,7 @@
   async function addProduct(product, categoryId) {
     const state = await load();
     const category = state.categories.find((candidate) => candidate.id === categoryId);
-    if (!category) throw new Error("카테고리를 찾지 못했습니다.");
+    if (!category) throw new Error("플레이리스트를 찾지 못했습니다.");
 
     const cleanProduct = {
       title: root.ShoplyCore.normalizeText(product.title).slice(0, 200),
@@ -121,7 +121,7 @@
   }
 
   async function removeCategory(id) {
-    if (id === DEFAULT_CATEGORY.id) throw new Error("기본 카테고리는 삭제할 수 없습니다.");
+    if (id === DEFAULT_CATEGORY.id) throw new Error("기본 플레이리스트는 삭제할 수 없습니다.");
     const state = await load();
     state.items.forEach((item) => {
       if (item.categoryId === id) item.categoryId = DEFAULT_CATEGORY.id;
