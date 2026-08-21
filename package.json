@@ -1,10 +1,10 @@
 {
   "name": "shoply-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "AI와 서버 없이 동작하는 쇼핑 컬렉션 Chrome 확장 프로그램",
   "scripts": {
-    "test": "node tests/shared.test.js && node tests/extractor-config.test.js && node tests/ui-preferences.test.js && node tests/repository.test.js",
-    "check": "node --check src/shared.js && node --check src/ui-preferences.js && node --check src/repository.js && node --check src/service-worker.js && node --check src/extractor.js && node --check src/sidepanel.js"
+    "test": "node tests/shared.test.js && node tests/extractor-config.test.js && node tests/page-access.test.js && node tests/ui-preferences.test.js && node tests/repository.test.js",
+    "check": "node --check src/shared.js && node --check src/page-access.js && node --check src/ui-preferences.js && node --check src/repository.js && node --check src/service-worker.js && node --check src/extractor.js && node --check src/sidepanel.js"
   }
 }

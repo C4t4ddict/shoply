@@ -21,6 +21,7 @@
   let toastTimer = null;
   let libraryCollapsed = false;
   let libraryCollapseAnimation = null;
+  let waitingForHostAccess = false;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -37,6 +38,8 @@
 
   function showCapture(product) {
     capturedProduct = product;
+    waitingForHostAccess = false;
+    elements.emptyScanButton.textContent = "현재 페이지 읽기";
     elements.captureLoading.classList.add("hidden");
     elements.captureEmpty.classList.add("hidden");
     elements.captureForm.classList.remove("hidden");
@@ -68,12 +71,18 @@
     elements.captureEmpty.querySelector("small").textContent = message || "상품 상세 페이지에서 다시 시도해주세요.";
   }
 
-  async function scanCurrentPage() {
+  async function scanCurrentPage({ requestHostAccess = false } = {}) {
     elements.captureEmpty.classList.add("hidden");
     elements.captureForm.classList.add("hidden");
     elements.captureLoading.classList.remove("hidden");
     try {
-      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_ACTIVE_TAB" });
+      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_ACTIVE_TAB", requestHostAccess });
+      if (response?.needsHostPermission) {
+        waitingForHostAccess = true;
+        elements.emptyScanButton.textContent = "사이트 접근 허용 후 다시 읽기";
+        showCaptureError(response.error);
+        return;
+      }
       if (!response?.ok || !response.product) throw new Error(response?.error || "상품 정보를 찾지 못했습니다.");
       showCapture(response.product);
     } catch (error) {
@@ -118,7 +127,7 @@
             </div>
           </div>
           <div class="product-actions">
-            <select data-action="move" aria-label="카테고리 이동">${categoryOptions(item.categoryId)}</select>
+            <select data-action="move" aria-label="플레이리스트 이동">${categoryOptions(item.categoryId)}</select>
             <button class="remove-item" type="button" data-action="remove" title="삭제" aria-label="상품 삭제">×</button>
           </div>
         </div>
@@ -147,7 +156,7 @@
   async function renderLibraryCollapsed({ animate = false } = {}) {
     elements.librarySection.classList.toggle("collapsed", libraryCollapsed);
     elements.toggleLibraryButton.setAttribute("aria-expanded", String(!libraryCollapsed));
-    elements.toggleLibraryButton.title = libraryCollapsed ? "카테고리 펼치기" : "카테고리 접기";
+    elements.toggleLibraryButton.title = libraryCollapsed ? "플레이리스트 펼치기" : "플레이리스트 접기";
     elements.toggleLibraryButton.querySelector(".sr-only").textContent = elements.toggleLibraryButton.title;
 
     libraryCollapseAnimation?.cancel();
@@ -205,7 +214,7 @@
         categoryId
       );
       selectedCategoryId = categoryId;
-      toast("카테고리에 담았어요. 합계가 업데이트됐습니다.");
+      toast("플레이리스트에 담았어요. 합계가 업데이트됐습니다.");
     } catch (error) {
       toast(error.message);
     }
@@ -251,8 +260,8 @@
     }
   }
 
-  elements.scanButton.addEventListener("click", scanCurrentPage);
-  elements.emptyScanButton.addEventListener("click", scanCurrentPage);
+  elements.scanButton.addEventListener("click", () => scanCurrentPage({ requestHostAccess: true }));
+  elements.emptyScanButton.addEventListener("click", () => scanCurrentPage({ requestHostAccess: true }));
   elements.captureForm.addEventListener("submit", handleAdd);
   elements.categoryTabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-category-id]");
@@ -286,17 +295,17 @@
       const category = await Repository.createCategory(elements.categoryNameInput.value);
       selectedCategoryId = category.id;
       elements.categoryDialog.close();
-      toast("새 카테고리를 만들었어요.");
+      toast("새 플레이리스트를 만들었어요.");
     } catch (error) {
       toast(error.message);
     }
   });
   elements.deleteCategoryButton.addEventListener("click", async () => {
     const category = state.categories.find((candidate) => candidate.id === selectedCategoryId);
-    if (!category || !confirm(`'${category.name}' 카테고리를 삭제할까요? 상품은 '내 쇼핑'으로 이동합니다.`)) return;
+    if (!category || !confirm(`'${category.name}' 플레이리스트를 삭제할까요? 상품은 '내 쇼핑'으로 이동합니다.`)) return;
     await Repository.removeCategory(category.id);
     selectedCategoryId = "default";
-    toast("카테고리를 삭제했어요.");
+    toast("플레이리스트를 삭제했어요.");
   });
   elements.priceInput.addEventListener("input", () => {
     const price = Core.parsePrice(elements.priceInput.value);
@@ -311,6 +320,9 @@
       showCaptureError(message.error);
       chrome.storage.session.remove(["pendingProduct", "pendingProductError", "contextScanStarted"]);
     }
+  });
+  chrome.permissions.onAdded.addListener(() => {
+    if (waitingForHostAccess) scanCurrentPage();
   });
 
   initialize().catch((error) => {

@@ -64,7 +64,7 @@
 
           <div class="add-controls">
             <label class="category-select-label">
-              <span>담을 카테고리</span>
+              <span>담을 플레이리스트</span>
               <select id="addCategorySelect"></select>
             </label>
             <button class="primary-button" type="submit">＋ 상품 담기</button>
@@ -76,19 +76,19 @@
         <div class="section-heading library-heading">
           <div>
             <span class="eyebrow">MY COLLECTIONS</span>
-            <h2 id="libraryTitle">쇼핑 카테고리</h2>
+            <h2 id="libraryTitle">쇼핑 플레이리스트</h2>
           </div>
           <div class="library-actions">
-            <button id="newCategoryButton" class="text-button" type="button">＋ 새 카테고리</button>
-            <button id="toggleLibraryButton" class="collapse-button" type="button" aria-expanded="true" aria-controls="libraryContent" title="카테고리 접기">
+            <button id="newCategoryButton" class="text-button" type="button">＋ 새 플레이리스트</button>
+            <button id="toggleLibraryButton" class="collapse-button" type="button" aria-expanded="true" aria-controls="libraryContent" title="플레이리스트 접기">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-              <span class="sr-only">카테고리 접기</span>
+              <span class="sr-only">플레이리스트 접기</span>
             </button>
           </div>
         </div>
 
         <div id="libraryContent" class="library-content">
-          <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="카테고리"></div>
+          <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="쇼핑 플레이리스트"></div>
 
           <article class="category-summary">
             <div>
@@ -96,7 +96,7 @@
               <small id="activeItemCount">상품 0개</small>
             </div>
             <div class="category-total">
-              <small>카테고리 합계</small>
+              <small>플레이리스트 합계</small>
               <strong id="activeCategoryTotal">₩0</strong>
             </div>
           </article>
@@ -104,11 +104,11 @@
           <div id="emptyLibrary" class="library-empty">
             <div class="record-art" aria-hidden="true"><span></span></div>
             <strong>아직 담긴 상품이 없어요</strong>
-            <p>여러 쇼핑몰에서 마음에 드는 상품을<br />하나의 카테고리로 모아보세요.</p>
+            <p>여러 쇼핑몰에서 마음에 드는 상품을<br />하나의 플레이리스트로 모아보세요.</p>
           </div>
 
           <div id="productList" class="product-list"></div>
-          <button id="deleteCategoryButton" class="danger-text-button hidden" type="button">이 카테고리 삭제</button>
+          <button id="deleteCategoryButton" class="danger-text-button hidden" type="button">이 플레이리스트 삭제</button>
         </div>
       </section>
     </main>
@@ -116,10 +116,10 @@
     <dialog id="categoryDialog">
       <form id="categoryForm" method="dialog">
         <div class="dialog-mark">＋</div>
-        <h2>새 카테고리</h2>
+        <h2>새 플레이리스트</h2>
         <p>여행 준비, 가을 코디처럼 원하는 테마로 묶어보세요.</p>
         <label>
-          <span>카테고리 이름</span>
+          <span>플레이리스트 이름</span>
           <input id="categoryNameInput" maxlength="40" placeholder="예: 제주도 여행 준비" autocomplete="off" />
         </label>
         <div class="dialog-actions">
