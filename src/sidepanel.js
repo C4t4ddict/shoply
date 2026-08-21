@@ -3,12 +3,14 @@
 
   const Core = globalThis.ShoplyCore;
   const Repository = globalThis.ShoplyRepository;
+  const UiPreferences = globalThis.ShoplyUiPreferences;
   const elements = Object.fromEntries(
     [
       "scanButton", "emptyScanButton", "captureLoading", "captureEmpty", "captureForm", "captureImage",
       "captureStore", "confidenceBadge", "titleInput", "priceInput", "captureNotice", "optionSummary",
       "addCategorySelect", "categoryTabs", "activeCategoryName", "activeItemCount", "activeCategoryTotal",
-      "emptyLibrary", "productList", "newCategoryButton", "categoryDialog", "categoryForm",
+      "emptyLibrary", "productList", "newCategoryButton", "librarySection", "libraryContent",
+      "toggleLibraryButton", "categoryDialog", "categoryForm",
       "categoryNameInput", "cancelCategoryButton", "deleteCategoryButton", "toast"
     ].map((id) => [id, document.getElementById(id)])
   );
@@ -17,6 +19,8 @@
   let selectedCategoryId = "default";
   let capturedProduct = null;
   let toastTimer = null;
+  let libraryCollapsed = false;
+  let libraryCollapseAnimation = null;
   let waitingForHostAccess = false;
 
   function toast(message) {
@@ -149,6 +153,51 @@
     renderLibrary();
   }
 
+  async function renderLibraryCollapsed({ animate = false } = {}) {
+    elements.librarySection.classList.toggle("collapsed", libraryCollapsed);
+    elements.toggleLibraryButton.setAttribute("aria-expanded", String(!libraryCollapsed));
+    elements.toggleLibraryButton.title = libraryCollapsed ? "플레이리스트 펼치기" : "플레이리스트 접기";
+    elements.toggleLibraryButton.querySelector(".sr-only").textContent = elements.toggleLibraryButton.title;
+
+    libraryCollapseAnimation?.cancel();
+    libraryCollapseAnimation = null;
+
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!animate || reduceMotion) {
+      elements.libraryContent.hidden = libraryCollapsed;
+      elements.libraryContent.inert = libraryCollapsed;
+      return;
+    }
+
+    if (libraryCollapsed && elements.libraryContent.contains(document.activeElement)) {
+      elements.toggleLibraryButton.focus();
+    }
+
+    elements.libraryContent.hidden = false;
+    elements.libraryContent.inert = libraryCollapsed;
+    const contentHeight = elements.libraryContent.scrollHeight;
+    const keyframes = libraryCollapsed
+      ? [{ height: `${contentHeight}px`, opacity: 1 }, { height: "0px", opacity: 0 }]
+      : [{ height: "0px", opacity: 0 }, { height: `${contentHeight}px`, opacity: 1 }];
+
+    const animation = elements.libraryContent.animate(keyframes, {
+      duration: 220,
+      easing: "cubic-bezier(.2,.8,.2,1)"
+    });
+    libraryCollapseAnimation = animation;
+
+    try {
+      await animation.finished;
+    } catch {
+      return;
+    } finally {
+      if (libraryCollapseAnimation === animation) libraryCollapseAnimation = null;
+    }
+
+    elements.libraryContent.hidden = libraryCollapsed;
+    elements.libraryContent.inert = libraryCollapsed;
+  }
+
   async function handleAdd(event) {
     event.preventDefault();
     if (!capturedProduct) return;
@@ -189,8 +238,11 @@
   }
 
   async function initialize() {
-    state = await Repository.load();
+    const [storedState, preferences] = await Promise.all([Repository.load(), UiPreferences.load()]);
+    state = storedState;
+    libraryCollapsed = preferences.libraryCollapsed;
     render();
+    await renderLibraryCollapsed();
     Repository.subscribe((nextState) => {
       state = nextState;
       render();
@@ -223,6 +275,18 @@
     elements.categoryNameInput.value = "";
     elements.categoryDialog.showModal();
     elements.categoryNameInput.focus();
+  });
+  elements.toggleLibraryButton.addEventListener("click", async () => {
+    const previousValue = libraryCollapsed;
+    libraryCollapsed = !libraryCollapsed;
+    void renderLibraryCollapsed({ animate: true });
+    try {
+      await UiPreferences.setLibraryCollapsed(libraryCollapsed);
+    } catch (error) {
+      libraryCollapsed = previousValue;
+      await renderLibraryCollapsed({ animate: true });
+      toast(error.message || "접기 설정을 저장하지 못했습니다.");
+    }
   });
   elements.cancelCategoryButton.addEventListener("click", () => elements.categoryDialog.close());
   elements.categoryForm.addEventListener("submit", async (event) => {

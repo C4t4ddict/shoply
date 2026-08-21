@@ -72,36 +72,44 @@
         </form>
       </section>
 
-      <section class="library-section" aria-labelledby="libraryTitle">
+      <section id="librarySection" class="library-section" aria-labelledby="libraryTitle">
         <div class="section-heading library-heading">
           <div>
             <span class="eyebrow">MY COLLECTIONS</span>
             <h2 id="libraryTitle">쇼핑 플레이리스트</h2>
           </div>
-          <button id="newCategoryButton" class="text-button" type="button">＋ 새 플레이리스트</button>
+          <div class="library-actions">
+            <button id="newCategoryButton" class="text-button" type="button">＋ 새 플레이리스트</button>
+            <button id="toggleLibraryButton" class="collapse-button" type="button" aria-expanded="true" aria-controls="libraryContent" title="플레이리스트 접기">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              <span class="sr-only">플레이리스트 접기</span>
+            </button>
+          </div>
         </div>
 
-        <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="쇼핑 플레이리스트"></div>
+        <div id="libraryContent" class="library-content">
+          <div id="categoryTabs" class="category-tabs" role="tablist" aria-label="쇼핑 플레이리스트"></div>
 
-        <article class="category-summary">
-          <div>
-            <span id="activeCategoryName">내 쇼핑</span>
-            <small id="activeItemCount">상품 0개</small>
-          </div>
-          <div class="category-total">
-            <small>플레이리스트 합계</small>
-            <strong id="activeCategoryTotal">₩0</strong>
-          </div>
-        </article>
+          <article class="category-summary">
+            <div>
+              <span id="activeCategoryName">내 쇼핑</span>
+              <small id="activeItemCount">상품 0개</small>
+            </div>
+            <div class="category-total">
+              <small>플레이리스트 합계</small>
+              <strong id="activeCategoryTotal">₩0</strong>
+            </div>
+          </article>
 
-        <div id="emptyLibrary" class="library-empty">
-          <div class="record-art" aria-hidden="true"><span></span></div>
-          <strong>아직 담긴 상품이 없어요</strong>
-          <p>여러 쇼핑몰에서 마음에 드는 상품을<br />하나의 플레이리스트로 모아보세요.</p>
+          <div id="emptyLibrary" class="library-empty">
+            <div class="record-art" aria-hidden="true"><span></span></div>
+            <strong>아직 담긴 상품이 없어요</strong>
+            <p>여러 쇼핑몰에서 마음에 드는 상품을<br />하나의 플레이리스트로 모아보세요.</p>
+          </div>
+
+          <div id="productList" class="product-list"></div>
+          <button id="deleteCategoryButton" class="danger-text-button hidden" type="button">이 플레이리스트 삭제</button>
         </div>
-
-        <div id="productList" class="product-list"></div>
-        <button id="deleteCategoryButton" class="danger-text-button hidden" type="button">이 플레이리스트 삭제</button>
       </section>
     </main>
 
@@ -124,6 +132,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="src/shared.js"></script>
+    <script src="src/ui-preferences.js"></script>
     <script src="src/repository.js"></script>
     <script src="src/sidepanel.js"></script>
   </body>
