@@ -48,6 +48,10 @@
 
 현재 MVP의 합계 기준 통화는 KRW이며 배송비와 쿠폰은 포함하지 않습니다.
 
+## 글꼴
+
+화면 글꼴은 [Spoqa Han Sans Neo](https://spoqa.github.io/spoqa-han-sans/ko-KR/) 서브셋 WOFF2를 확장 프로그램에 직접 포함해 사용합니다. 폰트 파일은 SIL Open Font License 1.1에 따라 배포되며 라이선스 원문은 `assets/fonts/spoqa-han-sans-neo/LICENSE_OFL.txt`에서 확인할 수 있습니다.
+
 ## 권한
 
 - `activeTab`: 사용자가 Shoply를 실행한 현재 상품 페이지 읽기
