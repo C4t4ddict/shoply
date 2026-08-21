@@ -75,6 +75,30 @@ test("카테고리를 삭제하면 상품은 기본 카테고리로 이동한다
   assert.equal(state.items[0].categoryId, "default");
 });
 
+test("기본 플레이리스트 이름을 변경해도 상품 연결을 유지한다", async () => {
+  await Repository.addProduct({
+    title: "기본 상품", price: 10000, productUrl: "https://example.com/product/1", store: "테스트"
+  }, "default");
+  await Repository.renameCategory("default", "이번 달 살 것");
+
+  const state = await Repository.load();
+  assert.equal(state.categories.find((category) => category.id === "default").name, "이번 달 살 것");
+  assert.equal(state.items[0].categoryId, "default");
+});
+
+test("플레이리스트 이름 수정 시 빈 값, 40자 초과, 중복을 거부한다", async () => {
+  const travel = await Repository.createCategory("여행");
+  const clothes = await Repository.createCategory("옷");
+
+  await assert.rejects(Repository.renameCategory(travel.id, "   "), /이름을 입력해주세요/);
+  await assert.rejects(Repository.renameCategory(travel.id, "가".repeat(41)), /40자 이하/);
+  await assert.rejects(Repository.renameCategory(travel.id, "옷"), /이미 있습니다/);
+
+  const state = await Repository.load();
+  assert.equal(state.categories.find((category) => category.id === travel.id).name, "여행");
+  assert.equal(state.categories.find((category) => category.id === clothes.id).name, "옷");
+});
+
 test("카테고리 순서를 변경하고 저장한다", async () => {
   const travel = await Repository.createCategory("여행");
   const clothes = await Repository.createCategory("옷");
