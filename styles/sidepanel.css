@@ -79,6 +79,14 @@ input:focus, select:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba
 
 .library-section { padding: 22px 16px; }
 .library-heading { align-items: center; }
+.library-actions { display: flex; align-items: center; gap: 10px; }
+.collapse-button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--white); cursor: pointer; }
+.collapse-button:hover { border-color: var(--ink); background: var(--lime); }
+.collapse-button svg { width: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; transition: transform .18s ease; }
+.library-section.collapsed .collapse-button svg { transform: rotate(-90deg); }
+.library-content { overflow: hidden; }
+.library-content[hidden] { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .text-button, .danger-text-button { border: 0; background: transparent; font-size: 10px; font-weight: 850; cursor: pointer; }
 .text-button { padding: 6px 0; border-bottom: 1px solid var(--ink); }
 .category-tabs { display: flex; gap: 7px; overflow-x: auto; margin: 17px -16px 12px; padding: 0 16px 5px; scrollbar-width: none; }
@@ -138,4 +146,5 @@ dialog p { margin: 0 0 16px; color: var(--muted); font-size: 10px; line-height: 
 
 @media (prefers-reduced-motion: reduce) {
   .category-tab { transition: none; }
+  .collapse-button svg { transition: none; }
 }
