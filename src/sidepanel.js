@@ -20,6 +20,7 @@
   let capturedProduct = null;
   let toastTimer = null;
   let libraryCollapsed = false;
+  let libraryCollapseAnimation = null;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -143,11 +144,49 @@
     renderLibrary();
   }
 
-  function renderLibraryCollapsed() {
+  async function renderLibraryCollapsed({ animate = false } = {}) {
     elements.librarySection.classList.toggle("collapsed", libraryCollapsed);
     elements.toggleLibraryButton.setAttribute("aria-expanded", String(!libraryCollapsed));
     elements.toggleLibraryButton.title = libraryCollapsed ? "카테고리 펼치기" : "카테고리 접기";
     elements.toggleLibraryButton.querySelector(".sr-only").textContent = elements.toggleLibraryButton.title;
+
+    libraryCollapseAnimation?.cancel();
+    libraryCollapseAnimation = null;
+
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!animate || reduceMotion) {
+      elements.libraryContent.hidden = libraryCollapsed;
+      elements.libraryContent.inert = libraryCollapsed;
+      return;
+    }
+
+    if (libraryCollapsed && elements.libraryContent.contains(document.activeElement)) {
+      elements.toggleLibraryButton.focus();
+    }
+
+    elements.libraryContent.hidden = false;
+    elements.libraryContent.inert = libraryCollapsed;
+    const contentHeight = elements.libraryContent.scrollHeight;
+    const keyframes = libraryCollapsed
+      ? [{ height: `${contentHeight}px`, opacity: 1 }, { height: "0px", opacity: 0 }]
+      : [{ height: "0px", opacity: 0 }, { height: `${contentHeight}px`, opacity: 1 }];
+
+    const animation = elements.libraryContent.animate(keyframes, {
+      duration: 220,
+      easing: "cubic-bezier(.2,.8,.2,1)"
+    });
+    libraryCollapseAnimation = animation;
+
+    try {
+      await animation.finished;
+    } catch {
+      return;
+    } finally {
+      if (libraryCollapseAnimation === animation) libraryCollapseAnimation = null;
+    }
+
+    elements.libraryContent.hidden = libraryCollapsed;
+    elements.libraryContent.inert = libraryCollapsed;
   }
 
   async function handleAdd(event) {
@@ -194,7 +233,7 @@
     state = storedState;
     libraryCollapsed = preferences.libraryCollapsed;
     render();
-    renderLibraryCollapsed();
+    await renderLibraryCollapsed();
     Repository.subscribe((nextState) => {
       state = nextState;
       render();
@@ -229,9 +268,16 @@
     elements.categoryNameInput.focus();
   });
   elements.toggleLibraryButton.addEventListener("click", async () => {
+    const previousValue = libraryCollapsed;
     libraryCollapsed = !libraryCollapsed;
-    renderLibraryCollapsed();
-    await UiPreferences.setLibraryCollapsed(libraryCollapsed);
+    void renderLibraryCollapsed({ animate: true });
+    try {
+      await UiPreferences.setLibraryCollapsed(libraryCollapsed);
+    } catch (error) {
+      libraryCollapsed = previousValue;
+      await renderLibraryCollapsed({ animate: true });
+      toast(error.message || "접기 설정을 저장하지 못했습니다.");
+    }
   });
   elements.cancelCategoryButton.addEventListener("click", () => elements.categoryDialog.close());
   elements.categoryForm.addEventListener("submit", async (event) => {
