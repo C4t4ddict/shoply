@@ -92,11 +92,17 @@ input:focus, select:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba
 .text-button { padding: 6px 0; border-bottom: 1px solid var(--ink); }
 .category-tabs { display: flex; gap: 7px; overflow-x: auto; margin: 17px -16px 12px; padding: 0 16px 5px; scrollbar-width: none; }
 .category-tabs::-webkit-scrollbar { display: none; }
-.category-tab { flex: 0 0 auto; padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--muted); font-size: 10px; font-weight: 700; cursor: grab; }
+.category-tab-item { display: inline-flex; flex: 0 0 auto; align-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--muted); }
+.category-tab-item:has(.category-tab[aria-selected="true"]) { border-color: var(--ink); background: var(--ink); color: var(--lime); }
+.category-tab-item.dragging { opacity: .48; border-style: dashed; }
+.category-tab { padding: 8px 5px 8px 11px; border: 0; background: transparent; color: inherit; font-size: 10px; font-weight: 700; cursor: grab; }
 .category-tab:active { cursor: grabbing; }
-.category-tab.dragging { opacity: .48; border-style: dashed; }
-.category-tab[aria-selected="true"] { border-color: var(--ink); background: var(--ink); color: var(--lime); }
 .category-tab b { margin-left: 5px; font-size: 9px; }
+.rename-category-button { display: grid; width: 28px; height: 28px; margin-right: 2px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: transparent; color: currentColor; cursor: pointer; opacity: .72; }
+.rename-category-button:hover, .rename-category-button:focus-visible { background: rgba(116,116,108,.14); opacity: 1; }
+.category-tab-item:has(.category-tab[aria-selected="true"]) .rename-category-button:hover,
+.category-tab-item:has(.category-tab[aria-selected="true"]) .rename-category-button:focus-visible { background: rgba(217,255,67,.16); }
+.rename-category-button svg { width: 13px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 
 .category-summary { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 13px; padding: 14px; border-radius: 15px; background: var(--lime); }
 .category-summary span, .category-summary strong { display: block; font-weight: 700; }

@@ -11,6 +11,7 @@
       "addCategorySelect", "categoryTabs", "activeCategoryName", "activeItemCount", "activeCategoryTotal",
       "emptyLibrary", "productList", "newCategoryButton", "librarySection", "libraryContent",
       "toggleLibraryButton", "categoryDialog", "categoryForm",
+      "categoryDialogMark", "categoryDialogTitle", "categoryDialogDescription", "categorySubmitButton",
       "categoryNameInput", "cancelCategoryButton", "deleteCategoryButton", "toast"
     ].map((id) => [id, document.getElementById(id)])
   );
@@ -23,6 +24,8 @@
   let libraryCollapsed = false;
   let libraryCollapseAnimation = null;
   let waitingForHostAccess = false;
+  let editingCategoryId = null;
+  let categoryDialogReturnId = null;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -125,7 +128,12 @@
     elements.categoryTabs.innerHTML = state.categories
       .map((category) => {
         const count = state.items.filter((item) => item.categoryId === category.id).length;
-        return `<button class="category-tab" type="button" role="tab" draggable="true" data-category-id="${category.id}" aria-selected="${category.id === selectedCategoryId}" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" title="드래그하거나 Alt+방향키로 순서 변경">${escapeHtml(category.name)}<b>${count}</b></button>`;
+        return `<div class="category-tab-item" draggable="true" data-category-id="${category.id}">
+          <button class="category-tab" type="button" role="tab" aria-selected="${category.id === selectedCategoryId}" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" title="드래그하거나 Alt+방향키로 순서 변경">${escapeHtml(category.name)}<b>${count}</b></button>
+          <button class="rename-category-button" type="button" data-action="rename-category" draggable="false" aria-label="플레이리스트 이름 수정" title="플레이리스트 이름 수정">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.2-1 10.6-10.6a2.1 2.1 0 0 0-3-3L5.2 16 4 20Z" /><path d="m13.8 6.4 3.8 3.8" /></svg>
+          </button>
+        </div>`;
       })
       .join("");
     elements.addCategorySelect.innerHTML = categoryOptions(selectedCategoryId);
@@ -175,6 +183,30 @@
   function render() {
     renderCategories();
     renderLibrary();
+  }
+
+  function openCategoryDialog(category = null, returnCategoryId = null) {
+    editingCategoryId = category?.id || null;
+    categoryDialogReturnId = returnCategoryId;
+    elements.categoryDialogMark.textContent = category ? "✎" : "＋";
+    elements.categoryDialogTitle.textContent = category ? "플레이리스트 이름 수정" : "새 플레이리스트";
+    elements.categoryDialogDescription.textContent = category
+      ? "상품과 순서는 그대로 유지되고 이름만 변경됩니다."
+      : "여행 준비, 가을 코디처럼 원하는 테마로 묶어보세요.";
+    elements.categorySubmitButton.textContent = category ? "저장" : "만들기";
+    elements.categoryNameInput.value = category?.name || "";
+    elements.categoryDialog.showModal();
+    elements.categoryNameInput.focus();
+    elements.categoryNameInput.select();
+  }
+
+  function focusCategoryControl(categoryId) {
+    if (!categoryId) return;
+    requestAnimationFrame(() => {
+      elements.categoryTabs
+        .querySelector(`[data-category-id="${CSS.escape(categoryId)}"] .rename-category-button`)
+        ?.focus();
+    });
   }
 
   async function renderLibraryCollapsed({ animate = false } = {}) {
@@ -229,7 +261,7 @@
       state = { ...state, categories };
       render();
       animateCategoryTabs(previousRects);
-      const movedTab = elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(movedCategoryId)}"]`);
+      const movedTab = elements.categoryTabs.querySelector(`[data-category-id="${CSS.escape(movedCategoryId)}"] .category-tab`);
       movedTab?.focus();
       const movedCategory = categories.find((category) => category.id === movedCategoryId);
       const movedIndex = categories.findIndex((category) => category.id === movedCategoryId);
@@ -307,12 +339,23 @@
   elements.emptyScanButton.addEventListener("click", () => scanCurrentPage({ requestHostAccess: true }));
   elements.captureForm.addEventListener("submit", handleAdd);
   elements.categoryTabs.addEventListener("click", (event) => {
-    const tab = event.target.closest("[data-category-id]");
+    const categoryItem = event.target.closest("[data-category-id]");
+    const renameButton = event.target.closest('[data-action="rename-category"]');
+    if (categoryItem && renameButton) {
+      const category = state.categories.find((candidate) => candidate.id === categoryItem.dataset.categoryId);
+      if (category) openCategoryDialog(category, category.id);
+      return;
+    }
+    const tab = event.target.closest(".category-tab");
     if (!tab) return;
-    selectedCategoryId = tab.dataset.categoryId;
+    selectedCategoryId = tab.closest("[data-category-id]").dataset.categoryId;
     render();
   });
   elements.categoryTabs.addEventListener("dragstart", (event) => {
+    if (event.target.closest('[data-action="rename-category"]')) {
+      event.preventDefault();
+      return;
+    }
     const tab = event.target.closest("[data-category-id]");
     if (!tab) return;
     draggedCategoryId = tab.dataset.categoryId;
@@ -348,7 +391,8 @@
   });
   elements.categoryTabs.addEventListener("keydown", async (event) => {
     if (!event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-    const tab = event.target.closest("[data-category-id]");
+    const tabButton = event.target.closest(".category-tab");
+    const tab = tabButton?.closest("[data-category-id]");
     if (!tab) return;
     const categoryIds = state.categories.map((category) => category.id);
     const fromIndex = categoryIds.indexOf(tab.dataset.categoryId);
@@ -360,11 +404,7 @@
   });
   elements.productList.addEventListener("click", handleProductAction);
   elements.productList.addEventListener("change", handleProductAction);
-  elements.newCategoryButton.addEventListener("click", () => {
-    elements.categoryNameInput.value = "";
-    elements.categoryDialog.showModal();
-    elements.categoryNameInput.focus();
-  });
+  elements.newCategoryButton.addEventListener("click", () => openCategoryDialog());
   elements.toggleLibraryButton.addEventListener("click", async () => {
     const previousValue = libraryCollapsed;
     libraryCollapsed = !libraryCollapsed;
@@ -378,9 +418,22 @@
     }
   });
   elements.cancelCategoryButton.addEventListener("click", () => elements.categoryDialog.close());
+  elements.categoryDialog.addEventListener("close", () => {
+    const returnCategoryId = categoryDialogReturnId;
+    editingCategoryId = null;
+    categoryDialogReturnId = null;
+    focusCategoryControl(returnCategoryId);
+  });
   elements.categoryForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
+      if (editingCategoryId) {
+        const categoryId = editingCategoryId;
+        await Repository.renameCategory(categoryId, elements.categoryNameInput.value);
+        elements.categoryDialog.close();
+        toast("플레이리스트 이름을 변경했어요.");
+        return;
+      }
       const category = await Repository.createCategory(elements.categoryNameInput.value);
       selectedCategoryId = category.id;
       elements.categoryDialog.close();

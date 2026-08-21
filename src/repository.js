@@ -52,6 +52,26 @@
     return category;
   }
 
+  async function renameCategory(id, name) {
+    const cleanName = root.ShoplyCore.normalizeText(name);
+    if (!cleanName) throw new Error("플레이리스트 이름을 입력해주세요.");
+    if (cleanName.length > 40) throw new Error("플레이리스트 이름은 40자 이하로 입력해주세요.");
+
+    const state = await load();
+    const category = state.categories.find((candidate) => candidate.id === id);
+    if (!category) throw new Error("플레이리스트를 찾지 못했습니다.");
+
+    const duplicate = state.categories.find(
+      (candidate) => candidate.id !== id && candidate.name.toLocaleLowerCase("ko") === cleanName.toLocaleLowerCase("ko")
+    );
+    if (duplicate) throw new Error("같은 이름의 플레이리스트가 이미 있습니다.");
+
+    category.name = cleanName;
+    category.updatedAt = Date.now();
+    await save(state);
+    return category;
+  }
+
   async function addProduct(product, categoryId) {
     const state = await load();
     const category = state.categories.find((candidate) => candidate.id === categoryId);
@@ -164,6 +184,7 @@
     load,
     removeCategory,
     removeItem,
+    renameCategory,
     reorderCategories,
     save,
     subscribe,

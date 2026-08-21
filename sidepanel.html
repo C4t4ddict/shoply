@@ -116,16 +116,16 @@
 
     <dialog id="categoryDialog">
       <form id="categoryForm" method="dialog">
-        <div class="dialog-mark">＋</div>
-        <h2>새 플레이리스트</h2>
-        <p>여행 준비, 가을 코디처럼 원하는 테마로 묶어보세요.</p>
+        <div id="categoryDialogMark" class="dialog-mark">＋</div>
+        <h2 id="categoryDialogTitle">새 플레이리스트</h2>
+        <p id="categoryDialogDescription">여행 준비, 가을 코디처럼 원하는 테마로 묶어보세요.</p>
         <label>
           <span>플레이리스트 이름</span>
           <input id="categoryNameInput" maxlength="40" placeholder="예: 제주도 여행 준비" autocomplete="off" />
         </label>
         <div class="dialog-actions">
           <button id="cancelCategoryButton" class="secondary-button" type="button">취소</button>
-          <button class="primary-button" type="submit">만들기</button>
+          <button id="categorySubmitButton" class="primary-button" type="submit">만들기</button>
         </div>
       </form>
     </dialog>
