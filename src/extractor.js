@@ -68,7 +68,7 @@
     {
       id: "gmarket", name: "G마켓", matches: (host) => hostMatches(host, "gmarket.co.kr"),
       title: [".itemtit", "h1.itemtit", "h1"],
-      price: [".price_real", ".price_innerwrap .price", "[class*='sale_price']"],
+      price: [".box__price-seller", ".price_real", ".price_innerwrap .price", "[class*='sale_price']"],
       image: [".box__viewer-container img", "img[alt*='상품이미지']"]
     },
     {
@@ -336,7 +336,7 @@
         document.querySelectorAll(selector).forEach((element) => {
           const text = element.getAttribute("content") || element.textContent;
           const currency = currencyFromText(text, siteAdapter.defaultCurrency || "KRW");
-          if (visible(element) && Core.parseMoney(text, currency)) elements.add(element);
+          if (visible(element) && (Core.parseSalePrice(text, currency) || Core.parseMoney(text, currency))) elements.add(element);
         });
       } catch {
         // Continue with the generic text walker.
@@ -366,7 +366,8 @@
     for (const element of priceElements(siteAdapter)) {
       const text = Core.normalizeText(element.getAttribute("content") || element.textContent);
       const currency = currencyFromText(text, siteAdapter.defaultCurrency || "KRW");
-      const price = Core.parseMoney(text, currency);
+      const salePrice = Core.parseSalePrice(text, currency);
+      const price = salePrice || Core.parseMoney(text, currency);
       if (!price) continue;
 
       const context = Core.normalizeText(`${element.parentElement?.textContent || ""} ${text}`).slice(0, 250);
@@ -374,6 +375,7 @@
       let score = 20;
       if (/price/i.test(signature)) score += 20;
       if (/sale|discount|final|total/i.test(signature)) score += 12;
+      if (salePrice) score += 70;
       if (element.matches("[itemprop='price']")) score += 40;
       if (/판매가|할인가|최종가|결제가/.test(context)) score += 18;
       if (siteAdapter.preferredPriceText?.test(context)) score += 35;
@@ -381,14 +383,22 @@
       score += distanceScore(element, titleElement);
       score += Math.max(0, ...purchaseButtons.map((button) => distanceScore(element, button)));
 
-      if (element.closest("del, s") || /정상가|정가|소비자가/.test(context)) score -= 35;
+      if (element.closest("del, s") || /원가|정상가|정가|소비자가|list\s*price|regular\s*price|original\s*price/i.test(context)) score -= 55;
+      if (/original|regular|list/i.test(signature)) score -= 70;
       if (/배송비|배송료|적립금|쿠폰|할부|월\s*\d|최대\s*[\d,]+원\s*할인/.test(context)) score -= 45;
       if (siteAdapter.excludedPriceText?.test(context)) score -= 80;
       if (element.closest("header, footer, nav, aside")) score -= 30;
       if (element.closest("[class*='recommend'], [class*='Recommend'], [class*='related'], [class*='Related']")) score -= 70;
       if (text.length > 80) score -= 20;
 
-      const candidate = { price, currency, score, element, method: `${siteAdapter.id}-dom` };
+      const candidate = {
+        price,
+        originalPrice: Core.parseOriginalPrice(context, currency),
+        currency,
+        score,
+        element,
+        method: `${siteAdapter.id}-dom`
+      };
       if (!best || candidate.score > best.score) best = candidate;
     }
     return best;
