@@ -7,27 +7,46 @@
     /^(?:fbclid|gclid|wbraid|gbraid|NaPm)$/i
   ];
 
-  function parsePrice(value) {
+  const ZERO_DECIMAL_CURRENCIES = new Set(["KRW", "JPY"]);
+
+  function parseMoney(value, currency = "KRW") {
+    const code = String(currency || "KRW").toUpperCase();
     if (typeof value === "number") {
-      return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+      if (!Number.isFinite(value) || value < 0) return null;
+      return ZERO_DECIMAL_CURRENCIES.has(code) ? Math.round(value) : value;
     }
     if (typeof value !== "string") return null;
 
     const normalized = value
       .replace(/\u00a0/g, " ")
-      .replace(/(?:KRW|₩|원)/gi, "")
+      .replace(/(?:KRW|USD|JPY|CNY|EUR|GBP|CAD|AUD|TWD|US\s*\$|CN\s*¥|₩|원|[$¥€£])/gi, "")
       .trim();
-    const matches = normalized.match(/\d[\d,.]*/g);
+    const matches = normalized.match(/\d[\d\s,.]*/g);
     if (!matches?.length) return null;
 
-    const token = matches
-      .map((candidate) => candidate.replace(/[^\d]/g, ""))
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length)[0];
-    if (!token) return null;
+    const values = matches.map((candidate) => {
+      let token = candidate.replace(/\s/g, "").replace(/[^\d,.]/g, "");
+      if (!token) return null;
+      if (ZERO_DECIMAL_CURRENCIES.has(code)) token = token.replace(/[^\d]/g, "");
+      else {
+        const lastComma = token.lastIndexOf(",");
+        const lastDot = token.lastIndexOf(".");
+        const separator = Math.max(lastComma, lastDot);
+        const decimalDigits = separator >= 0 ? token.length - separator - 1 : 0;
+        if (separator >= 0 && decimalDigits > 0 && decimalDigits <= 2) {
+          token = `${token.slice(0, separator).replace(/[^\d]/g, "")}.${token.slice(separator + 1).replace(/[^\d]/g, "")}`;
+        } else token = token.replace(/[^\d]/g, "");
+      }
+      const parsed = Number(token);
+      return Number.isFinite(parsed) ? parsed : null;
+    }).filter((candidate) => candidate !== null);
+    if (!values.length) return null;
 
-    const parsed = Number(token);
-    return Number.isFinite(parsed) ? parsed : null;
+    return Math.max(...values);
+  }
+
+  function parsePrice(value) {
+    return parseMoney(value, "KRW");
   }
 
   function formatPrice(value, currency = "KRW") {
@@ -66,7 +85,7 @@
     return (items || [])
       .filter((item) => item.categoryId === categoryId)
       .reduce((sum, item) => {
-        const price = Number(item.price) || 0;
+        const price = Number(item.krwPrice ?? (item.currency === "KRW" || !item.currency ? item.price : 0)) || 0;
         const quantity = Math.max(1, Number(item.quantity) || 1);
         return sum + price * quantity;
       }, 0);
@@ -78,10 +97,19 @@
 
   function siteNameFromHost(hostname) {
     const host = String(hostname || "").toLowerCase();
-    if (host.includes("a-bly.com") || host.includes("ably.co.kr")) return "에이블리";
-    if (host.includes("musinsa.com")) return "무신사";
-    if (host.includes("coupang.com")) return "쿠팡";
-    if (host.includes("naver.com")) return "네이버 쇼핑";
+    const matches = (domain) => host === domain || host.endsWith(`.${domain}`);
+    const sites = [
+      [["a-bly.com", "ably.co.kr"], "에이블리"], [["musinsa.com"], "무신사"],
+      [["coupang.com"], "쿠팡"], [["naver.com"], "네이버 쇼핑"], [["29cm.co.kr"], "29CM"],
+      [["wconcept.co.kr"], "W컨셉"], [["zigzag.kr"], "지그재그"], [["kream.co.kr"], "KREAM"],
+      [["11st.co.kr"], "11번가"], [["gmarket.co.kr"], "G마켓"], [["ssg.com"], "SSG.COM"],
+      [["lotteon.com"], "롯데ON"], [["auction.co.kr"], "옥션"], [["aliexpress.com"], "AliExpress"],
+      [["temu.com"], "Temu"], [["amazon.com"], "Amazon"], [["amazon.co.jp"], "Amazon Japan"],
+      [["iherb.com"], "iHerb"], [["shein.com"], "SHEIN"], [["ebay.com"], "eBay"], [["newegg.com"], "Newegg"]
+    ];
+    for (const [domains, name] of sites) {
+      if (domains.some(matches)) return name;
+    }
     return host.replace(/^www\./, "") || "쇼핑몰";
   }
 
@@ -90,6 +118,7 @@
     formatPrice,
     normalizeText,
     normalizeUrl,
+    parseMoney,
     parsePrice,
     sameOptions,
     siteNameFromHost

@@ -10,7 +10,7 @@
 
   function freshState() {
     return {
-      version: 1,
+      version: 2,
       categories: [{ ...DEFAULT_CATEGORY }],
       items: []
     };
@@ -25,6 +25,14 @@
       return initial;
     }
     if (!stored.categories.length) stored.categories.push({ ...DEFAULT_CATEGORY });
+    if (stored.version !== 2) {
+      stored.items = stored.items.map((item) => ({
+        ...item,
+        krwPrice: item.krwPrice ?? (item.currency === "KRW" || !item.currency ? Number(item.price) || null : null)
+      }));
+      stored.version = 2;
+      await save(stored);
+    }
     return stored;
   }
 
@@ -77,11 +85,14 @@
     const category = state.categories.find((candidate) => candidate.id === categoryId);
     if (!category) throw new Error("플레이리스트를 찾지 못했습니다.");
 
+    const currency = product.currency || "KRW";
     const cleanProduct = {
       title: root.ShoplyCore.normalizeText(product.title).slice(0, 200),
       price: Math.max(0, Number(product.price) || 0),
       originalPrice: Number(product.originalPrice) || null,
-      currency: product.currency || "KRW",
+      currency,
+      krwPrice: Math.max(0, Number(product.krwPrice ?? (currency === "KRW" ? product.price : 0)) || 0),
+      fx: product.fx || null,
       imageUrl: product.imageUrl || "",
       productUrl: root.ShoplyCore.normalizeUrl(product.productUrl),
       store: product.store || "쇼핑몰",
@@ -90,6 +101,7 @@
     };
     if (!cleanProduct.title) throw new Error("상품명이 없습니다.");
     if (!cleanProduct.price) throw new Error("가격을 확인해주세요.");
+    if (!cleanProduct.krwPrice) throw new Error("원화 환산 가격을 확인해주세요.");
 
     const existing = state.items.find(
       (item) =>
@@ -101,6 +113,9 @@
     if (existing) {
       existing.quantity = (Number(existing.quantity) || 1) + 1;
       existing.price = cleanProduct.price;
+      existing.krwPrice = cleanProduct.krwPrice;
+      existing.currency = cleanProduct.currency;
+      existing.fx = cleanProduct.fx;
       existing.updatedAt = Date.now();
       await save(state);
       return existing;
@@ -123,12 +138,13 @@
     const state = await load();
     const item = state.items.find((candidate) => candidate.id === id);
     if (!item) throw new Error("상품을 찾지 못했습니다.");
-    const allowed = ["categoryId", "quantity", "price", "title"];
+    const allowed = ["categoryId", "quantity", "price", "krwPrice", "title"];
     for (const key of allowed) {
       if (Object.hasOwn(patch, key)) item[key] = patch[key];
     }
     item.quantity = Math.max(1, Number(item.quantity) || 1);
     item.price = Math.max(0, Number(item.price) || 0);
+    item.krwPrice = Math.max(0, Number(item.krwPrice ?? (item.currency === "KRW" ? item.price : 0)) || 0);
     item.updatedAt = Date.now();
     await save(state);
     return item;

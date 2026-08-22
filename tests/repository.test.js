@@ -118,3 +118,31 @@ test("누락되거나 중복된 카테고리 순서는 거부한다", async () =
   const state = await Repository.load();
   assert.deepEqual(state.categories.map((category) => category.id), ["default", travel.id]);
 });
+
+test("외화 상품의 원문 가격과 원화 환산가를 함께 저장한다", async () => {
+  await Repository.addProduct({
+    title: "Newegg GPU",
+    price: 499.99,
+    currency: "USD",
+    krwPrice: 689986,
+    fx: { rateToKrw: 1380, rateDate: "2026-08-21", status: "live", source: "frankfurter-v2" },
+    productUrl: "https://www.newegg.com/p/1",
+    store: "Newegg"
+  }, "default");
+
+  const state = await Repository.load();
+  assert.equal(state.version, 2);
+  assert.equal(state.items[0].price, 499.99);
+  assert.equal(state.items[0].currency, "USD");
+  assert.equal(state.items[0].krwPrice, 689986);
+  assert.equal(globalThis.ShoplyCore.calculateCategoryTotal(state.items, "default"), 689986);
+});
+
+test("환산가 없는 외화 상품은 저장하지 않는다", async () => {
+  await assert.rejects(Repository.addProduct({
+    title: "환율 미확인 상품",
+    price: 10,
+    currency: "USD",
+    productUrl: "https://example.com/product/foreign"
+  }, "default"), /원화 환산 가격/);
+});

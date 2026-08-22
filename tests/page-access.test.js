@@ -19,12 +19,31 @@ test("호스트 권한 오류를 사이트 접근 요청 대상으로 판별한�
 
 test("주요 쇼핑몰은 고정 권한, 일반 사이트는 선택 권한으로 선언한다", () => {
   assert.equal(Number(manifest.minimum_chrome_version) >= 133, true);
-  assert.deepEqual(manifest.host_permissions, [
+  const expectedHosts = [
     "https://*.a-bly.com/*",
     "https://*.ably.co.kr/*",
     "https://*.musinsa.com/*",
     "https://*.coupang.com/*",
-    "https://*.naver.com/*"
-  ]);
+    "https://*.naver.com/*",
+    "https://*.29cm.co.kr/*",
+    "https://*.wconcept.co.kr/*",
+    "https://*.zigzag.kr/*",
+    "https://*.kream.co.kr/*",
+    "https://*.11st.co.kr/*",
+    "https://*.gmarket.co.kr/*",
+    "https://*.ssg.com/*",
+    "https://*.lotteon.com/*",
+    "https://*.auction.co.kr/*",
+    "https://*.aliexpress.com/*",
+    "https://*.temu.com/*",
+    "https://*.amazon.com/*",
+    "https://*.amazon.co.jp/*",
+    "https://*.iherb.com/*",
+    "https://*.shein.com/*",
+    "https://*.ebay.com/*",
+    "https://*.newegg.com/*",
+    "https://api.frankfurter.dev/*"
+  ];
+  assert.deepEqual(manifest.host_permissions, expectedHosts);
   assert.deepEqual(manifest.optional_host_permissions, ["http://*/*", "https://*/*"]);
 });
