@@ -138,13 +138,14 @@
     const state = await load();
     const item = state.items.find((candidate) => candidate.id === id);
     if (!item) throw new Error("상품을 찾지 못했습니다.");
-    const allowed = ["categoryId", "quantity", "price", "krwPrice", "title"];
+    const allowed = ["categoryId", "quantity", "price", "krwPrice", "title", "fx"];
     for (const key of allowed) {
       if (Object.hasOwn(patch, key)) item[key] = patch[key];
     }
     item.quantity = Math.max(1, Number(item.quantity) || 1);
     item.price = Math.max(0, Number(item.price) || 0);
     item.krwPrice = Math.max(0, Number(item.krwPrice ?? (item.currency === "KRW" ? item.price : 0)) || 0);
+    if (!item.price || !item.krwPrice) throw new Error("가격을 확인해주세요.");
     item.updatedAt = Date.now();
     await save(state);
     return item;

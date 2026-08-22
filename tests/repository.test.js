@@ -146,3 +146,30 @@ test("환산가 없는 외화 상품은 저장하지 않는다", async () => {
     productUrl: "https://example.com/product/foreign"
   }, "default"), /원화 환산 가격/);
 });
+
+test("KRW 상품 가격을 수정하면 현재가와 합계가 같이 바뀐다", async () => {
+  const item = await Repository.addProduct({
+    title: "가격 수정 상품", price: 32000, currency: "KRW",
+    productUrl: "https://example.com/product/edit-krw"
+  }, "default");
+  await Repository.updateItem(item.id, { price: 24900, krwPrice: 24900, fx: null });
+  const state = await Repository.load();
+  assert.equal(state.items[0].price, 24900);
+  assert.equal(state.items[0].krwPrice, 24900);
+  assert.equal(globalThis.ShoplyCore.calculateCategoryTotal(state.items, "default"), 24900);
+});
+
+test("외화 상품은 원문가를 유지하고 예상 원화만 수정한다", async () => {
+  const item = await Repository.addProduct({
+    title: "해외 가격 수정", price: 19.99, currency: "USD", krwPrice: 27800,
+    fx: { status: "live", rateToKrw: 1390 }, productUrl: "https://example.com/product/edit-usd"
+  }, "default");
+  await Repository.updateItem(item.id, {
+    krwPrice: 26500,
+    fx: { status: "manual", source: "user", rateToKrw: 26500 / 19.99 }
+  });
+  const state = await Repository.load();
+  assert.equal(state.items[0].price, 19.99);
+  assert.equal(state.items[0].krwPrice, 26500);
+  assert.equal(state.items[0].fx.status, "manual");
+});
