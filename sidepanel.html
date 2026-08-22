@@ -54,8 +54,12 @@
                 <input id="titleInput" name="title" required maxlength="200" />
               </label>
               <label>
+                <span>현재 가격</span>
+                <div class="price-input-wrap"><input id="priceInput" name="price" inputmode="decimal" required /><b id="priceCurrencyLabel">원</b></div>
+              </label>
+              <label id="krwPriceField" class="hidden">
                 <span>예상 원화 가격</span>
-                <div class="price-input-wrap"><input id="priceInput" name="price" inputmode="numeric" required /><b>원</b></div>
+                <div class="price-input-wrap"><input id="krwPriceInput" name="krwPrice" inputmode="numeric" /><b>원</b></div>
               </label>
             </div>
           </div>

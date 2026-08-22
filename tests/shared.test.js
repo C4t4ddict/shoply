@@ -41,6 +41,18 @@ test("외화 상품은 환산된 원화 가격으로만 합산한다", () => {
   assert.equal(Core.calculateCategoryTotal(items, "travel"), 32600);
 });
 
+test("KRW 상품은 읽은 현재가를 그대로 원화 가격에 사용한다", () => {
+  assert.deepEqual(Core.productPriceFields({ price: 206640, currency: "KRW" }), {
+    currency: "KRW", price: 206640, krwPrice: 206640, isForeign: false
+  });
+});
+
+test("외화 상품은 현재가와 예상 원화를 별도 필드로 유지한다", () => {
+  assert.deepEqual(Core.productPriceFields({ price: 19.99, currency: "USD", krwPrice: 27785 }), {
+    currency: "USD", price: 19.99, krwPrice: 27785, isForeign: true
+  });
+});
+
 test("대상 쇼핑몰 이름을 판별한다", () => {
   assert.equal(Core.siteNameFromHost("m.a-bly.com"), "에이블리");
   assert.equal(Core.siteNameFromHost("www.musinsa.com"), "무신사");
