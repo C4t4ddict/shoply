@@ -18,3 +18,7 @@ test("상품 카드에서 가격 수정 다이얼로그를 열고 저장한다",
 test("주요 UI에 10px 미만의 작은 텍스트를 사용하지 않는다", () => {
   assert.doesNotMatch(styles, /font-size:\s*[1-9]px/);
 });
+
+test("스크롤바 표시 여부와 관계없이 가로 폭을 예약한다", () => {
+  assert.match(styles, /scrollbar-gutter:\s*stable/);
+});
