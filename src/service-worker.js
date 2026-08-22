@@ -1,7 +1,11 @@
-importScripts("page-access.js");
+importScripts("page-access.js", "exchange-rate.js");
 
 const MENU_ID = "shoply-add-product";
 const PageAccess = globalThis.ShoplyPageAccess;
+const exchangeRate = globalThis.ShoplyExchangeRate.createService({
+  fetchFn: (...args) => fetch(...args),
+  storage: chrome.storage.local
+});
 
 chrome.runtime.onInstalled.addListener(async () => {
   chrome.contextMenus.removeAll(() => {
@@ -29,7 +33,18 @@ async function extractFromTab(tabId) {
     target: { tabId },
     func: () => globalThis.ShoplyExtractor.extract()
   });
-  return result?.result || null;
+  const product = result?.result || null;
+  if (!product?.price) return product;
+  try {
+    return await exchangeRate.convertProduct(product);
+  } catch (error) {
+    return {
+      ...product,
+      krwPrice: null,
+      needsReview: true,
+      conversionError: error.message || "환율을 불러오지 못했습니다."
+    };
+  }
 }
 
 async function requestHostAccess(tabId) {
