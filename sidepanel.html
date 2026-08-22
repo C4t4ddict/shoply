@@ -135,6 +135,22 @@
       </form>
     </dialog>
 
+    <dialog id="priceDialog">
+      <form id="priceForm" method="dialog">
+        <div class="dialog-mark">₩</div>
+        <h2>상품 가격 수정</h2>
+        <p id="priceDialogDescription">플레이리스트에 저장된 가격과 합계를 업데이트합니다.</p>
+        <label>
+          <span id="editPriceLabel">현재 가격</span>
+          <div class="price-input-wrap"><input id="editPriceInput" inputmode="numeric" required /><b>원</b></div>
+        </label>
+        <div class="dialog-actions">
+          <button id="cancelPriceButton" class="secondary-button" type="button">취소</button>
+          <button class="primary-button" type="submit">저장</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="src/shared.js"></script>

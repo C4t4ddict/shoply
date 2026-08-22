@@ -13,7 +13,8 @@
       "emptyLibrary", "productList", "newCategoryButton", "librarySection", "libraryContent",
       "toggleLibraryButton", "categoryDialog", "categoryForm",
       "categoryDialogMark", "categoryDialogTitle", "categoryDialogDescription", "categorySubmitButton",
-      "categoryNameInput", "cancelCategoryButton", "deleteCategoryButton", "toast"
+      "categoryNameInput", "cancelCategoryButton", "deleteCategoryButton", "priceDialog", "priceForm",
+      "priceDialogDescription", "editPriceLabel", "editPriceInput", "cancelPriceButton", "toast"
     ].map((id) => [id, document.getElementById(id)])
   );
 
@@ -27,6 +28,7 @@
   let waitingForHostAccess = false;
   let editingCategoryId = null;
   let categoryDialogReturnId = null;
+  let editingPriceItemId = null;
 
   function toast(message) {
     elements.toast.textContent = message;
@@ -160,6 +162,7 @@
 
   function productCard(item) {
     const optionText = Object.values(item.options || {}).filter(Boolean).join(" · ");
+    const currency = item.currency || "KRW";
     const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='90'%3E%3Crect width='100%25' height='100%25' fill='%23eeeDE7'/%3E%3Ctext x='50%25' y='52%25' text-anchor='middle' font-size='10' fill='%23888'%3ENo image%3C/text%3E%3C/svg%3E";
     return `
       <article class="product-card" data-item-id="${item.id}">
@@ -170,7 +173,7 @@
           <div class="product-meta"><span>${escapeHtml(item.store)}</span><span>${escapeHtml(optionText)}</span></div>
           <a class="product-title" href="${escapeHtml(item.productUrl)}" target="_blank" rel="noreferrer">${escapeHtml(item.title)}</a>
           <div class="product-price-row">
-            <div><span class="product-price">${Core.formatPrice(item.krwPrice, "KRW")}</span>${item.currency !== "KRW" ? `<small class="source-price">${escapeHtml(Core.formatPrice(item.price, item.currency))}</small>` : ""}</div>
+            <div><span class="product-price">${Core.formatPrice(item.krwPrice, "KRW")}</span>${currency !== "KRW" ? `<small class="source-price">${escapeHtml(Core.formatPrice(item.price, currency))}</small>` : ""}</div>
             <div class="quantity" aria-label="수량">
               <button type="button" data-action="decrease" aria-label="수량 줄이기">−</button>
               <span>${item.quantity}</span>
@@ -179,6 +182,7 @@
           </div>
           <div class="product-actions">
             <select data-action="move" aria-label="플레이리스트 이동">${categoryOptions(item.categoryId)}</select>
+            <button class="edit-price-button" type="button" data-action="edit-price" title="가격 수정" aria-label="${escapeHtml(item.title)} 가격 수정">₩</button>
             <button class="remove-item" type="button" data-action="remove" title="삭제" aria-label="상품 삭제">×</button>
           </div>
         </div>
@@ -226,6 +230,19 @@
         .querySelector(`[data-category-id="${CSS.escape(categoryId)}"] .rename-category-button`)
         ?.focus();
     });
+  }
+
+  function openPriceDialog(item) {
+    editingPriceItemId = item.id;
+    const foreign = item.currency && item.currency !== "KRW";
+    elements.editPriceLabel.textContent = foreign ? "예상 원화 가격" : "현재 가격";
+    elements.priceDialogDescription.textContent = foreign
+      ? `‘${item.title}’의 원문 ${Core.formatPrice(item.price, item.currency)}은 유지하고, 표시·합산할 원화 가격을 수정합니다.`
+      : `‘${item.title}’의 현재 가격과 플레이리스트 합계를 업데이트합니다.`;
+    elements.editPriceInput.value = Number(item.krwPrice || item.price || 0).toLocaleString("ko-KR");
+    elements.priceDialog.showModal();
+    elements.editPriceInput.focus();
+    elements.editPriceInput.select();
   }
 
   async function renderLibraryCollapsed({ animate = false } = {}) {
@@ -336,6 +353,11 @@
     const card = target.closest("[data-item-id]");
     const item = state.items.find((candidate) => candidate.id === card?.dataset.itemId);
     if (!item) return;
+
+    if (target.dataset.action === "edit-price") {
+      openPriceDialog(item);
+      return;
+    }
 
     try {
       if (target.dataset.action === "increase") await Repository.updateItem(item.id, { quantity: item.quantity + 1 });
@@ -453,6 +475,37 @@
     }
   });
   elements.cancelCategoryButton.addEventListener("click", () => elements.categoryDialog.close());
+  elements.cancelPriceButton.addEventListener("click", () => elements.priceDialog.close());
+  elements.priceDialog.addEventListener("close", () => {
+    const itemId = editingPriceItemId;
+    editingPriceItemId = null;
+    requestAnimationFrame(() => {
+      elements.productList.querySelector(`[data-item-id="${CSS.escape(itemId || "")}"] [data-action="edit-price"]`)?.focus();
+    });
+  });
+  elements.priceForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const item = state.items.find((candidate) => candidate.id === editingPriceItemId);
+    const krwPrice = Core.parsePrice(elements.editPriceInput.value);
+    if (!item || !krwPrice) {
+      elements.editPriceInput.focus();
+      toast("수정할 가격을 입력해주세요.");
+      return;
+    }
+    try {
+      const foreign = item.currency && item.currency !== "KRW";
+      await Repository.updateItem(item.id, foreign
+        ? {
+            krwPrice,
+            fx: { status: "manual", source: "user", rateDate: "", fetchedAt: Date.now(), rateToKrw: krwPrice / item.price }
+          }
+        : { price: krwPrice, krwPrice, fx: null });
+      elements.priceDialog.close();
+      toast("가격과 플레이리스트 합계를 수정했어요.");
+    } catch (error) {
+      toast(error.message);
+    }
+  });
   elements.categoryDialog.addEventListener("close", () => {
     const returnCategoryId = categoryDialogReturnId;
     editingCategoryId = null;
@@ -502,6 +555,12 @@
     elements.krwPriceInput.value = price
       ? price.toLocaleString("ko-KR")
       : elements.krwPriceInput.value.replace(/[^\d]/g, "");
+  });
+  elements.editPriceInput.addEventListener("input", () => {
+    const price = Core.parsePrice(elements.editPriceInput.value);
+    elements.editPriceInput.value = price
+      ? price.toLocaleString("ko-KR")
+      : elements.editPriceInput.value.replace(/[^\d]/g, "");
   });
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "CONTEXT_PRODUCT") {
