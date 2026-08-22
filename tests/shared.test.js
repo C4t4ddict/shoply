@@ -16,6 +16,19 @@ test("외화 소수점과 천 단위 구분자를 보존해 파싱한다", () =>
   assert.equal(Core.parseMoney("€1.299,95", "EUR"), 1299.95);
 });
 
+test("원가와 판매가가 함께 있으면 할인 판매가를 우선한다", () => {
+  const gmarket = "쿠폰적용가 원가 32,900원 할인율 24% 판매가 24,900원";
+  assert.equal(Core.parseSalePrice(gmarket, "KRW"), 24900);
+  assert.equal(Core.parseOriginalPrice(gmarket, "KRW"), 32900);
+  assert.equal(Core.parseSalePrice("정상가 39,900원 할인가 29,900원", "KRW"), 29900);
+});
+
+test("해외 쇼핑몰의 sale price도 원가보다 우선한다", () => {
+  const value = "List Price $99.99 Sale Price $79.99";
+  assert.equal(Core.parseSalePrice(value, "USD"), 79.99);
+  assert.equal(Core.parseOriginalPrice(value, "USD"), 99.99);
+});
+
 test("추적 파라미터만 제거하고 상품 옵션 파라미터는 유지한다", () => {
   const normalized = Core.normalizeUrl(
     "https://shop.example/product/1?color=black&utm_source=test&n_media=123#reviews"

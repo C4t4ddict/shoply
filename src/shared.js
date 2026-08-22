@@ -49,6 +49,33 @@
     return parseMoney(value, "KRW");
   }
 
+  function labeledPrice(value, currency, patterns) {
+    if (typeof value !== "string") return null;
+    for (const pattern of patterns) {
+      const match = value.match(pattern);
+      if (!match?.[1]) continue;
+      const price = parseMoney(match[1], currency);
+      if (price) return price;
+    }
+    return null;
+  }
+
+  function parseSalePrice(value, currency = "KRW") {
+    const amount = "((?:(?:KRW|USD|JPY|CNY|EUR|GBP|CAD|AUD|TWD|US\\s*\\$)\\s*)?[$₩¥€£]?\\s*\\d[\\d\\s,.]*)";
+    return labeledPrice(value, currency, [
+      new RegExp(`(?:최종\\s*결제(?:가|금액)?|결제가|최종가|즉시\\s*구매가)\\s*[:：]?\\s*${amount}`, "i"),
+      new RegExp(`(?:쿠폰\\s*적용가)\\s*[:：]?\\s*(?!원가|정상가|정가)${amount}`, "i"),
+      new RegExp(`(?:할인가|판매가|세일가|sale\\s*price|deal\\s*price|current\\s*price)\\s*[:：]?\\s*${amount}`, "i")
+    ]);
+  }
+
+  function parseOriginalPrice(value, currency = "KRW") {
+    const amount = "((?:(?:KRW|USD|JPY|CNY|EUR|GBP|CAD|AUD|TWD|US\\s*\\$)\\s*)?[$₩¥€£]?\\s*\\d[\\d\\s,.]*)";
+    return labeledPrice(value, currency, [
+      new RegExp(`(?:원가|정상가|정가|소비자가|list\\s*price|regular\\s*price|original\\s*price)\\s*[:：]?\\s*${amount}`, "i")
+    ]);
+  }
+
   function formatPrice(value, currency = "KRW") {
     const amount = Number(value) || 0;
     try {
@@ -136,7 +163,9 @@
     normalizeImageUrl,
     normalizeUrl,
     parseMoney,
+    parseOriginalPrice,
     parsePrice,
+    parseSalePrice,
     productPriceFields,
     sameOptions,
     siteNameFromHost
