@@ -276,7 +276,8 @@
       score += Math.round(wordOverlap(product.name, titleHint) * 30);
       const productUrl = Core.normalizeUrl(product.url || product.offers?.url || "");
       if (productUrl && productUrl === Core.normalizeUrl(location.href)) score += 25;
-      const image = Array.isArray(product.image) ? product.image[0] : product.image?.url || product.image;
+      const imageValue = Array.isArray(product.image) ? product.image[0] : product.image;
+      const image = imageValue?.url || imageValue?.contentUrl || imageValue;
       const candidate = {
         ...offer,
         title: Core.normalizeText(product.name),
