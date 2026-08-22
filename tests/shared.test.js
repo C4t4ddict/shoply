@@ -23,6 +23,29 @@ test("추적 파라미터만 제거하고 상품 옵션 파라미터는 유지�
   assert.equal(normalized, "https://shop.example/product/1?color=black");
 });
 
+test("상품 페이지 기준으로 protocol-relative 이미지 URL을 절대경로화한다", () => {
+  assert.equal(
+    Core.normalizeUrl("//gdimg.gmarket.co.kr/4309391234/still/600?ver=1", "https://item.gmarket.co.kr/Item?goodscode=4309391234"),
+    "https://gdimg.gmarket.co.kr/4309391234/still/600?ver=1"
+  );
+  assert.equal(
+    Core.normalizeUrl("/images/product.jpg", "https://shop.example/products/1"),
+    "https://shop.example/images/product.jpg"
+  );
+});
+
+test("구조화 상품의 배열과 ImageObject 이미지를 지원한다", () => {
+  assert.equal(
+    Core.normalizeImageUrl([{ contentUrl: "//img.29cm.co.kr/product.jpg" }], "https://product.29cm.co.kr/catalog/1"),
+    "https://img.29cm.co.kr/product.jpg"
+  );
+  assert.equal(
+    Core.normalizeImageUrl(["https://thumbnail.coupangcdn.com/product.jpg"], "https://www.coupang.com/vp/products/1"),
+    "https://thumbnail.coupangcdn.com/product.jpg"
+  );
+  assert.equal(Core.normalizeImageUrl({ url: "data:image/png;base64,abc" }, "https://shop.example/product/1"), "");
+});
+
 test("한 카테고리의 가격과 수량만 합산한다", () => {
   const items = [
     { categoryId: "travel", price: 10000, quantity: 2 },

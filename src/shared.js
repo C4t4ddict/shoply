@@ -62,9 +62,10 @@
     }
   }
 
-  function normalizeUrl(value) {
+  function normalizeUrl(value, base) {
+    if (!String(value || "").trim()) return "";
     try {
-      const url = new URL(value);
+      const url = new URL(value, base);
       url.hash = "";
       for (const key of [...url.searchParams.keys()]) {
         if (TRACKING_PARAMS.some((pattern) => pattern.test(key))) {
@@ -75,6 +76,14 @@
     } catch {
       return String(value || "");
     }
+  }
+
+  function normalizeImageUrl(value, base) {
+    const candidate = Array.isArray(value) ? value[0] : value;
+    const raw = candidate?.url || candidate?.contentUrl || candidate;
+    if (typeof raw !== "string" || !raw.trim()) return "";
+    const normalized = normalizeUrl(raw.trim(), base);
+    return /^https?:\/\//i.test(normalized) ? normalized : "";
   }
 
   function normalizeText(value) {
@@ -124,6 +133,7 @@
     calculateCategoryTotal,
     formatPrice,
     normalizeText,
+    normalizeImageUrl,
     normalizeUrl,
     parseMoney,
     parsePrice,

@@ -68,7 +68,8 @@
     {
       id: "gmarket", name: "G마켓", matches: (host) => hostMatches(host, "gmarket.co.kr"),
       title: [".itemtit", "h1.itemtit", "h1"],
-      price: [".price_real", ".price_innerwrap .price", "[class*='sale_price']"]
+      price: [".price_real", ".price_innerwrap .price", "[class*='sale_price']"],
+      image: [".box__viewer-container img", "img[alt*='상품이미지']"]
     },
     {
       id: "ssg", name: "SSG.COM", matches: (host) => hostMatches(host, "ssg.com"),
@@ -174,6 +175,23 @@
     return "";
   }
 
+  function imageUrl(value) {
+    return Core.normalizeImageUrl(value, location.href);
+  }
+
+  function imageUrlFromElement(element) {
+    if (!element) return "";
+    const source =
+      element.getAttribute("data-src") ||
+      element.getAttribute("data-original") ||
+      element.getAttribute("data-lazy-src") ||
+      element.currentSrc ||
+      element.getAttribute("src") ||
+      element.getAttribute("srcset")?.split(",")[0]?.trim().split(/\s+/)[0] ||
+      "";
+    return imageUrl(source);
+  }
+
   function jsonLdObjects() {
     const objects = [];
     const visit = (value) => {
@@ -266,28 +284,29 @@
     return null;
   }
 
-  function structuredCandidate(titleHint, siteAdapter) {
+  function structuredCandidates(titleHint, siteAdapter) {
     const products = jsonLdObjects().filter((object) => hasType(object, "Product"));
-    let best = null;
+    let content = null;
+    let priced = null;
     for (const product of products) {
       const offer = extractOffer(product.offers, siteAdapter.defaultCurrency || "KRW");
-      if (!offer) continue;
-      let score = 75;
+      let score = offer ? 75 : 45;
       score += Math.round(wordOverlap(product.name, titleHint) * 30);
-      const productUrl = Core.normalizeUrl(product.url || product.offers?.url || "");
+      const offers = Array.isArray(product.offers) ? product.offers : [product.offers];
+      const rawProductUrl = product.url || offers[0]?.url || "";
+      const productUrl = rawProductUrl ? Core.normalizeUrl(rawProductUrl, location.href) : "";
       if (productUrl && productUrl === Core.normalizeUrl(location.href)) score += 25;
-      const imageValue = Array.isArray(product.image) ? product.image[0] : product.image;
-      const image = imageValue?.url || imageValue?.contentUrl || imageValue;
       const candidate = {
-        ...offer,
+        ...(offer || {}),
         title: Core.normalizeText(product.name),
-        imageUrl: image || "",
+        imageUrl: imageUrl(product.image),
         score,
         method: "json-ld"
       };
-      if (!best || candidate.score > best.score) best = candidate;
+      if (!content || candidate.score > content.score) content = candidate;
+      if (offer && (!priced || candidate.score > priced.score)) priced = candidate;
     }
-    return best;
+    return { content, priced };
   }
 
   function distanceScore(element, anchor) {
@@ -401,7 +420,7 @@
     const titleHint = Core.normalizeText(
       titleElement?.textContent || meta("og:title", "twitter:title") || document.title.replace(/\s*[|｜-].*$/, "")
     );
-    const structured = structuredCandidate(titleHint, siteAdapter);
+    const structured = structuredCandidates(titleHint, siteAdapter);
     const dom = domPriceCandidate(siteAdapter, titleElement);
     const metaCurrency = normalizeCurrency(
       meta("product:price:currency", "og:price:currency"),
@@ -409,14 +428,23 @@
     );
     const metaPrice = Core.parseMoney(meta("product:price:amount", "og:price:amount", "twitter:data1"), metaCurrency);
     const metaCandidate = metaPrice ? { price: metaPrice, currency: metaCurrency, score: 70, method: "meta" } : null;
-    const winner = [structured, dom, metaCandidate].filter(Boolean).sort((a, b) => b.score - a.score)[0] || null;
+    const winner = [structured.priced, dom, metaCandidate].filter(Boolean).sort((a, b) => b.score - a.score)[0] || null;
 
-    const title = structured?.title && wordOverlap(structured.title, titleHint) >= 0.3 ? structured.title : titleHint;
-    const imageUrl =
-      structured?.imageUrl ||
-      meta("og:image", "twitter:image") ||
-      firstVisible(["main img", "article img", "img[itemprop='image']"])?.currentSrc ||
-      "";
+    const title = structured.content?.title && wordOverlap(structured.content.title, titleHint) >= 0.3
+      ? structured.content.title
+      : titleHint;
+    const imageElement = firstVisible([
+      ...(siteAdapter.image || []),
+      "img[itemprop='image']",
+      "main img",
+      "article img",
+      "img[alt*='상품']",
+      "img[alt*='Product']"
+    ]);
+    const extractedImageUrl =
+      structured.content?.imageUrl ||
+      imageUrl(meta("og:image:secure_url", "og:image", "twitter:image")) ||
+      imageUrlFromElement(imageElement);
     const price = winner?.price || null;
     const confidence = winner ? Math.min(100, Math.max(0, winner.score)) : 0;
 
@@ -425,7 +453,7 @@
       price,
       originalPrice: winner?.originalPrice || null,
       currency: winner?.currency || metaCurrency,
-      imageUrl,
+      imageUrl: extractedImageUrl,
       productUrl: Core.normalizeUrl(location.href),
       store: siteAdapter.name || Core.siteNameFromHost(HOST),
       options: selectedOptions(),
