@@ -7,7 +7,8 @@
   const elements = Object.fromEntries(
     [
       "scanButton", "emptyScanButton", "captureLoading", "captureEmpty", "captureForm", "captureImage",
-      "captureStore", "confidenceBadge", "titleInput", "priceInput", "captureNotice", "currencySummary", "optionSummary",
+      "captureStore", "confidenceBadge", "titleInput", "priceInput", "priceCurrencyLabel", "krwPriceField",
+      "krwPriceInput", "captureNotice", "currencySummary", "optionSummary",
       "addCategorySelect", "categoryTabs", "activeCategoryName", "activeItemCount", "activeCategoryTotal",
       "emptyLibrary", "productList", "newCategoryButton", "librarySection", "libraryContent",
       "toggleLibraryButton", "categoryDialog", "categoryForm",
@@ -41,19 +42,28 @@
   }
 
   function showCapture(product) {
-    capturedProduct = product;
+    const { currency, krwPrice, isForeign: foreignCurrency } = Core.productPriceFields(product);
+    capturedProduct = { ...product, currency, krwPrice };
     waitingForHostAccess = false;
     elements.emptyScanButton.textContent = "현재 페이지 읽기";
     elements.captureLoading.classList.add("hidden");
     elements.captureEmpty.classList.add("hidden");
     elements.captureForm.classList.remove("hidden");
     elements.titleInput.value = product.title || "";
-    elements.priceInput.value = product.krwPrice ? Number(product.krwPrice).toLocaleString("ko-KR") : "";
+    elements.priceInput.value = product.price
+      ? Number(product.price).toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
+          maximumFractionDigits: currency === "KRW" || currency === "JPY" ? 0 : 2
+        })
+      : "";
+    elements.priceCurrencyLabel.textContent = currency === "KRW" ? "원" : currency;
+    elements.krwPriceField.classList.toggle("hidden", !foreignCurrency);
+    elements.krwPriceInput.required = foreignCurrency;
+    elements.krwPriceInput.value = foreignCurrency && krwPrice ? Number(krwPrice).toLocaleString("ko-KR") : "";
     elements.captureImage.src = product.imageUrl || "";
     elements.captureImage.style.display = product.imageUrl ? "block" : "none";
     elements.captureStore.textContent = product.store || "쇼핑몰";
 
-    const review = product.needsReview || !product.price || !product.krwPrice;
+    const review = product.needsReview || !product.price || !krwPrice;
     elements.confidenceBadge.textContent = review ? "가격 확인 필요" : "자동 인식 완료";
     elements.confidenceBadge.classList.toggle("good", !review);
     elements.captureNotice.classList.toggle("hidden", !review);
@@ -63,12 +73,11 @@
         ? "여러 가격이 있는 페이지일 수 있어요. 담기 전에 현재 가격을 한 번 확인해주세요."
         : "가격을 자동으로 찾지 못했어요. 페이지에 표시된 현재 판매가를 직접 입력해주세요.";
 
-    const foreignCurrency = product.currency && product.currency !== "KRW";
     elements.currencySummary.classList.toggle("hidden", !foreignCurrency);
     if (foreignCurrency) {
       const rateDate = product.fx?.rateDate ? ` · ${escapeHtml(product.fx.rateDate)} 환율` : "";
       const stale = product.fx?.status === "stale" ? " · 최근 저장 환율" : "";
-      elements.currencySummary.innerHTML = `<b>원문 ${escapeHtml(Core.formatPrice(product.price, product.currency))}</b>${rateDate}${stale}<small>예상 원화에는 배송비·관세·카드 수수료가 포함되지 않아요.</small>`;
+      elements.currencySummary.innerHTML = `<b>${escapeHtml(currency)} 가격을 원화로 환산</b>${rateDate}${stale}<small>예상 원화에는 배송비·관세·카드 수수료가 포함되지 않아요.</small>`;
     }
 
     const options = Object.entries(product.options || {});
@@ -286,25 +295,30 @@
   async function handleAdd(event) {
     event.preventDefault();
     if (!capturedProduct) return;
-    const price = Core.parsePrice(elements.priceInput.value);
+    const currency = capturedProduct.currency || "KRW";
+    const price = Core.parseMoney(elements.priceInput.value, currency);
+    const krwPrice = currency === "KRW" ? price : Core.parsePrice(elements.krwPriceInput.value);
     if (!price) {
       elements.priceInput.focus();
       toast("현재 판매 가격을 입력해주세요.");
       return;
     }
+    if (!krwPrice) {
+      elements.krwPriceInput.focus();
+      toast("예상 원화 가격을 입력해주세요.");
+      return;
+    }
     try {
       const categoryId = elements.addCategorySelect.value;
-      const hasSourcePrice = Number(capturedProduct.price) > 0;
-      const currency = hasSourcePrice ? (capturedProduct.currency || "KRW") : "KRW";
       await Repository.addProduct(
         {
           ...capturedProduct,
           title: elements.titleInput.value,
           currency,
-          price: currency === "KRW" ? price : capturedProduct.price,
-          krwPrice: price,
+          price,
+          krwPrice,
           fx: currency !== "KRW" && !capturedProduct.fx
-            ? { status: "manual", source: "user", rateDate: "", fetchedAt: Date.now(), rateToKrw: price / capturedProduct.price }
+            ? { status: "manual", source: "user", rateDate: "", fetchedAt: Date.now(), rateToKrw: krwPrice / price }
             : capturedProduct.fx
         },
         categoryId
@@ -471,8 +485,23 @@
     toast("플레이리스트를 삭제했어요.");
   });
   elements.priceInput.addEventListener("input", () => {
-    const price = Core.parsePrice(elements.priceInput.value);
-    elements.priceInput.value = price ? price.toLocaleString("ko-KR") : elements.priceInput.value.replace(/[^\d]/g, "");
+    const currency = capturedProduct?.currency || "KRW";
+    const price = Core.parseMoney(elements.priceInput.value, currency);
+    if (currency === "KRW") {
+      elements.priceInput.value = price
+        ? price.toLocaleString("ko-KR")
+        : elements.priceInput.value.replace(/[^\d]/g, "");
+    }
+    if (!price) return;
+    if (currency !== "KRW" && capturedProduct?.fx?.rateToKrw) {
+      elements.krwPriceInput.value = Math.round(price * capturedProduct.fx.rateToKrw).toLocaleString("ko-KR");
+    }
+  });
+  elements.krwPriceInput.addEventListener("input", () => {
+    const price = Core.parsePrice(elements.krwPriceInput.value);
+    elements.krwPriceInput.value = price
+      ? price.toLocaleString("ko-KR")
+      : elements.krwPriceInput.value.replace(/[^\d]/g, "");
   });
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "CONTEXT_PRODUCT") {

@@ -91,6 +91,13 @@
       }, 0);
   }
 
+  function productPriceFields(product) {
+    const currency = String(product?.currency || "KRW").toUpperCase();
+    const price = Number(product?.price) || null;
+    const krwPrice = Number(product?.krwPrice ?? (currency === "KRW" ? price : null)) || null;
+    return { currency, price, krwPrice, isForeign: currency !== "KRW" };
+  }
+
   function sameOptions(left, right) {
     return JSON.stringify(left || {}) === JSON.stringify(right || {});
   }
@@ -120,6 +127,7 @@
     normalizeUrl,
     parseMoney,
     parsePrice,
+    productPriceFields,
     sameOptions,
     siteNameFromHost
   };
